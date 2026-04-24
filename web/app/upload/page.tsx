@@ -16,19 +16,17 @@ export default function UploadPage() {
   const isInstalled = installedModels.includes(selectedModel) || selectedModel === 'regex-only';
 
   const handleFiles = async (files: File[]) => {
-    let firstId: string | null = null;
     for (const file of files) {
       const bytes = await file.arrayBuffer();
-      const id = addDoc({
+      addDoc({
         filename: file.name,
         fileBytes: bytes,
         pages: [],
         status: 'uploading',
         detectionProgress: { currentPage: 0, totalPages: 0 },
       });
-      if (!firstId) firstId = id;
     }
-    if (firstId) router.push(`/review/${firstId}`);
+    router.push('/processing');
   };
 
   return (

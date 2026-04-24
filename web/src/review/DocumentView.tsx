@@ -1,17 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useDocuments, type DocumentSession } from '@/src/store/document-store';
-import { useSettings } from '@/src/store/settings-store';
+import { useSettings, MODELS } from '@/src/store/settings-store';
 import { loadPdfInBrowser, type RenderedPage } from '@/src/pdf/browser-renderer';
-import { detectDocument, getDetectors } from '@/src/detection/browser-runner';
 import { PdfPage } from './PdfPage';
 import { SpanSidebar } from './SpanSidebar';
 import { KeyboardLayer } from './KeyboardLayer';
 import { ExportButton } from './ExportButton';
+import { ExportAllButton } from './ExportAllButton';
 import { ManualSelect } from './ManualSelect';
 import { DocumentQueue } from './DocumentQueue';
 import { Kbd } from '@/src/ui/Kbd';
-import { MODELS } from '@/src/store/settings-store';
+import { useProcessingStatus } from '@/src/processing/runner';
+import { ProcessingBanner } from './ProcessingBanner';
 
 interface Props {
   doc: DocumentSession;
@@ -19,57 +20,25 @@ interface Props {
 
 export function DocumentView({ doc }: Props) {
   const selectedModel = useSettings((s) => s.selectedModel);
-  const setStatus = useDocuments((s) => s.setStatus);
-  const setPage = useDocuments((s) => s.setPage);
   const updateSpan = useDocuments((s) => s.updateSpan);
   const addSpan = useDocuments((s) => s.addSpan);
+  const processingStatus = useProcessingStatus();
+  void selectedModel;
 
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [focusedSpanId, setFocusedSpanId] = useState<string | null>(null);
-  const [loadProgress, setLoadProgress] = useState(0);
-  const [detecting, setDetecting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Detection has already happened in /processing. We just need to render
+      // the PDF for visual display; the spans are already in the store.
       const pdf = await loadPdfInBrowser(doc.fileBytes);
       const out: RenderedPage[] = [];
       for (let i = 0; i < pdf.numPages; i++) out.push(await pdf.getPage(i));
       if (cancelled) return;
       setPages(out);
-
-      out.forEach((p, idx) => {
-        setPage(doc.id, idx, {
-          pageNum: idx,
-          text: p.text,
-          width: p.width,
-          height: p.height,
-          spans: [],
-          status: 'pending',
-        });
-      });
-
-      setStatus(doc.id, 'detecting');
-      setDetecting(true);
-      const detectors = await getDetectors({
-        selectedModel,
-        onLoadProgress: (p) => setLoadProgress(p),
-      });
-
-      await detectDocument(out, detectors, (pageNum, spans) => {
-        if (cancelled) return;
-        setPage(doc.id, pageNum, {
-          pageNum,
-          text: out[pageNum].text,
-          width: out[pageNum].width,
-          height: out[pageNum].height,
-          spans,
-          status: 'ready',
-        });
-      });
-      setDetecting(false);
-      setStatus(doc.id, 'reviewing');
     })();
     return () => {
       cancelled = true;
@@ -93,8 +62,12 @@ export function DocumentView({ doc }: Props) {
     }
   };
 
+  const isProcessingThisDoc =
+    processingStatus.isRunning && processingStatus.progress?.docFilename === doc.filename;
+
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
+      <ProcessingBanner />
       {/* Document toolbar */}
       <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-6 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -104,13 +77,11 @@ export function DocumentView({ doc }: Props) {
           <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-ink-subtle)] font-mono">
             · {MODELS.find((m) => m.id === selectedModel)?.name.split('—')[0].trim() ?? selectedModel}
           </span>
-          {detecting && (
-            <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-accent)] font-mono">
-              detecting
-            </span>
-          )}
         </div>
-        <ExportButton doc={doc} />
+        <div className="flex items-center gap-2">
+          <ExportAllButton />
+          <ExportButton doc={doc} />
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden bg-[color:var(--color-surface-muted)]">
@@ -118,9 +89,7 @@ export function DocumentView({ doc }: Props) {
         <div className="flex-1 overflow-auto py-8 px-6">
           {pages.length === 0 && (
             <p className="text-center text-sm text-[color:var(--color-ink-muted)]">
-              {loadProgress > 0
-                ? `Loading model… ${Math.round(loadProgress * 100)}%`
-                : 'Loading PDF…'}
+              Loading PDF…
             </p>
           )}
           {renderedPage && (
@@ -150,7 +119,7 @@ export function DocumentView({ doc }: Props) {
                 page={renderedPage}
                 spans={spans}
                 focusedSpanId={focusedSpanId}
-                detecting={detecting && pageState?.status !== 'ready'}
+                detecting={isProcessingThisDoc && pageState?.status !== 'ready'}
                 onSpanClick={setFocusedSpanId}
               />
             </div>
@@ -159,7 +128,7 @@ export function DocumentView({ doc }: Props) {
         <SpanSidebar
           spans={spans}
           focusedSpanId={focusedSpanId}
-          detecting={detecting}
+          detecting={isProcessingThisDoc}
           onSelect={setFocusedSpanId}
           onAccept={acceptSpan}
           onReject={rejectSpan}

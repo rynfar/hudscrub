@@ -78,3 +78,41 @@ export function triggerJsonDownload(obj: unknown, filename: string) {
   const bytes = new TextEncoder().encode(text);
   triggerDownload(bytes, filename, 'application/json');
 }
+
+/**
+ * Bundle multiple exported documents (and their mappings, if any) into one ZIP
+ * download. Used by the "Export all" action when a batch contains multiple docs.
+ */
+export async function exportBatchAsZip(
+  docs: DocumentSession[],
+  mode: Mode,
+  seed?: number,
+): Promise<{ filename: string; bytes: Uint8Array; warnings: string[] }> {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const warnings: string[] = [];
+  for (const doc of docs) {
+    try {
+      const result = await exportDocument(doc, mode, seed);
+      const baseName = doc.filename.replace(/\.pdf$/, '');
+      const suffix = mode === 'redact' ? '.redacted.pdf' : '.sandboxed.pdf';
+      zip.file(`${baseName}${suffix}`, result.bytes);
+      if (result.mappings) {
+        zip.file(`${baseName}.mappings.json`, JSON.stringify(result.mappings, null, 2));
+      }
+      if (result.warning) {
+        warnings.push(`${doc.filename}: ${result.warning}`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      warnings.push(`${doc.filename}: export failed — ${msg}`);
+    }
+  }
+  const blob = await zip.generateAsync({ type: 'uint8array' });
+  const stamp = new Date().toISOString().slice(0, 10);
+  return {
+    filename: `hudscrub-${mode}-${stamp}.zip`,
+    bytes: blob,
+    warnings,
+  };
+}
