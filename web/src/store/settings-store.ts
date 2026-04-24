@@ -71,6 +71,8 @@ export interface Settings {
   sandboxSeed?: number;
   autoAcceptRegex: boolean;
   hasCompletedOnboarding: boolean;
+  /** Models the user has previously installed (via onboarding or settings). */
+  installedModels: ModelId[];
 }
 
 const DEFAULTS: Settings = {
@@ -81,11 +83,13 @@ const DEFAULTS: Settings = {
   detectionPasses: 2,
   autoAcceptRegex: true,
   hasCompletedOnboarding: false,
+  installedModels: [],
 };
 
 interface SettingsActions {
   set: (patch: Partial<Settings>) => void;
   reset: () => void;
+  markInstalled: (id: ModelId) => void;
 }
 
 const safeStorage = () =>
@@ -99,11 +103,17 @@ export const useSettings = create<Settings & SettingsActions>()(
       ...DEFAULTS,
       set: (patch) => set((s) => ({ ...s, ...patch })),
       reset: () => set(() => ({ ...DEFAULTS })),
+      markInstalled: (id) =>
+        set((s) =>
+          s.installedModels.includes(id)
+            ? s
+            : { ...s, installedModels: [...s.installedModels, id] },
+        ),
     }),
     {
       name: 'hudscrub.settings.v1',
       storage: createJSONStorage(safeStorage),
-      partialize: ({ set: _set, reset: _reset, ...state }) => state,
+      partialize: ({ set: _set, reset: _reset, markInstalled: _mi, ...state }) => state,
     },
   ),
 );
