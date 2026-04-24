@@ -125,15 +125,23 @@ export function SpanSidebar({
                     }`}
                   >
                     <PillBadge tone={toneForSpan(s)}>·</PillBadge>
-                    <span
-                      className={`font-mono text-xs flex-1 break-words leading-snug ${
-                        s.decision === 'rejected'
-                          ? 'line-through text-[color:var(--color-ink-subtle)]'
-                          : ''
-                      }`}
-                    >
-                      {s.text}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`font-mono text-xs break-words leading-snug ${
+                          s.decision === 'rejected'
+                            ? 'line-through text-[color:var(--color-ink-subtle)]'
+                            : ''
+                        }`}
+                      >
+                        {s.text}
+                      </div>
+                      {s.replacement && (
+                        <div className="font-mono text-[11px] break-words leading-snug text-[color:var(--color-ink-muted)] mt-0.5 flex items-baseline gap-1.5">
+                          <span className="text-[color:var(--color-ink-subtle)]">→</span>
+                          <span>{s.replacement}</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex gap-1">
                       <button
                         type="button"

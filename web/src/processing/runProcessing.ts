@@ -3,6 +3,7 @@ import { detectDocument, getDetectors } from '@/src/detection/browser-runner';
 import { loadPdfInBrowser, type RenderedPage } from '@/src/pdf/browser-renderer';
 import type { DocumentSession, PageState } from '@/src/store/document-store';
 import type { ModelId } from '@/src/store/settings-store';
+import { getSandboxMapper } from './sandbox-mapper';
 
 export interface ProcessingProgress {
   docIndex: number;
@@ -29,7 +30,23 @@ export async function runProcessing(
   docs: DocumentSession[],
   selectedModel: ModelId,
   handlers: ProcessingHandlers,
+  options: { sandboxMode?: boolean; sandboxSeed?: number } = {},
 ): Promise<void> {
+  // In sandbox mode, populate each span's `replacement` field as it's detected
+  // so the sidebar can show "original → fake" without waiting for export.
+  const mapper = options.sandboxMode ? getSandboxMapper(options.sandboxSeed) : null;
+  const fillReplacements = (spans: PageState['spans']): PageState['spans'] =>
+    mapper
+      ? spans.map((s) => {
+          if (s.replacement || s.label === 'DOLLAR') return s;
+          try {
+            return { ...s, replacement: mapper.mapValue(s.label, s.text) };
+          } catch {
+            return s;
+          }
+        })
+      : spans;
+
   for (let i = 0; i < docs.length; i++) {
     if (handlers.shouldCancel()) return;
     const doc = docs[i];
@@ -103,7 +120,7 @@ export async function runProcessing(
         text: pdfPages[pageNum].text,
         width: pdfPages[pageNum].width,
         height: pdfPages[pageNum].height,
-        spans,
+        spans: fillReplacements(spans),
         status: 'ready',
       });
       pageIdx = pageNum + 1;

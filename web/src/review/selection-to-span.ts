@@ -1,5 +1,7 @@
 'use client';
 import type { Span } from '@/src/types';
+import { useSettings } from '@/src/store/settings-store';
+import { replacementFor } from '@/src/processing/sandbox-mapper';
 
 const SCALE = 1.5;
 
@@ -90,11 +92,20 @@ export function selectionToSpan(pageNum: number, pageText: string): Span | null 
 
   const finalText = start >= 0 ? pageText.slice(start, end) : text;
 
+  // In sandbox mode, populate the replacement so the user sees what it'll
+  // become as soon as they click "Redact this".
+  const settings = useSettings.getState();
+  const replacement =
+    settings.mode === 'sandbox'
+      ? replacementFor('CUSTOM', finalText, settings.sandboxSeed)
+      : undefined;
+
   return {
     id: crypto.randomUUID(),
     source: 'manual',
     label: 'CUSTOM',
     text: finalText,
+    replacement,
     start: start >= 0 ? start : 0,
     end: start >= 0 ? end : 0,
     bbox: { x: pdfX, y: pdfY, width: pdfW, height: pdfH, pageNum },

@@ -2,7 +2,8 @@
 import { useSyncExternalStore } from 'react';
 import { runProcessing, type ProcessingProgress } from './runProcessing';
 import { useDocuments, type PageState } from '@/src/store/document-store';
-import { type ModelId } from '@/src/store/settings-store';
+import { type ModelId, useSettings } from '@/src/store/settings-store';
+import { resetSandboxMapper } from './sandbox-mapper';
 
 export interface ProcessingState {
   isRunning: boolean;
@@ -46,6 +47,14 @@ export function startProcessing(docIds: string[], selectedModel: ModelId) {
   const documents = useDocuments.getState().documents;
   const docs = docIds.map((id) => documents[id]).filter(Boolean);
   if (docs.length === 0) return;
+
+  // Read current sandbox config so detected spans get their replacement fields
+  // populated up-front (for sidebar display).
+  const settings = useSettings.getState();
+  const sandboxMode = settings.mode === 'sandbox';
+  const sandboxSeed = settings.sandboxSeed;
+  // Fresh mapper for this batch — same name → same fake within and across the batch
+  resetSandboxMapper();
 
   cancelRef = { cancelled: false };
   state = {
@@ -103,7 +112,7 @@ export function startProcessing(docIds: string[], selectedModel: ModelId) {
         set({ progress: p });
       }
     },
-  }).catch((e) => {
+  }, { sandboxMode, sandboxSeed }).catch((e) => {
     console.error('[processing] fatal:', e);
     set({
       isRunning: false,
@@ -120,6 +129,7 @@ export function cancelProcessing() {
 export function resetProcessing() {
   state = INITIAL;
   cancelRef = { cancelled: false };
+  resetSandboxMapper();
   emit();
 }
 

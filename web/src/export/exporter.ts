@@ -1,8 +1,8 @@
 'use client';
 import { redactDocument } from '@/src/output/redactor';
-import { ValueMapper } from '@/src/mapping/value-mapper';
 import { verifyDollarPreservation } from '@/src/output/dollar-verifier';
 import { loadPdfInBrowser } from '@/src/pdf/browser-renderer';
+import { getSandboxMapper } from '@/src/processing/sandbox-mapper';
 import type { DocumentSession } from '@/src/store/document-store';
 import type { Mode, Span } from '@/src/types';
 
@@ -19,12 +19,21 @@ export async function exportDocument(
   seed?: number,
 ): Promise<ExportResult> {
   const acceptedSpans: Span[] = [];
-  const mapper = mode === 'sandbox' ? new ValueMapper(seed) : null;
+  // Use the same singleton mapper that processing populated. If we're in
+  // sandbox mode but the span doesn't already have a replacement (edge case:
+  // mode toggled after processing), fill it now from the same mapper.
+  const mapper = mode === 'sandbox' ? getSandboxMapper(seed) : null;
   for (const page of doc.pages) {
     for (const s of page.spans) {
       if (s.decision !== 'accepted') continue;
       const span = { ...s };
-      if (mapper) span.replacement = mapper.mapValue(s.label, s.text);
+      if (mapper && !span.replacement && s.label !== 'DOLLAR') {
+        try {
+          span.replacement = mapper.mapValue(s.label, s.text);
+        } catch {
+          /* skip */
+        }
+      }
       acceptedSpans.push(span);
     }
   }
