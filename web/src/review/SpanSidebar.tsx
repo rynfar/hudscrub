@@ -110,6 +110,7 @@ export function SpanSidebar({
                   <motion.div
                     role="button"
                     tabIndex={0}
+                    title={s.text}
                     onClick={() => onSelect(s.id)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -119,13 +120,13 @@ export function SpanSidebar({
                     }}
                     whileHover={{ backgroundColor: 'rgba(26, 26, 26, 0.03)' }}
                     transition={{ duration: 0.12 }}
-                    className={`w-full text-left px-5 py-2 flex items-center gap-3 cursor-pointer ${
+                    className={`w-full text-left px-5 py-2 flex items-start gap-3 cursor-pointer ${
                       focusedSpanId === s.id ? 'bg-[color:var(--color-surface-muted)]' : ''
                     }`}
                   >
                     <PillBadge tone={toneForSpan(s)}>·</PillBadge>
                     <span
-                      className={`font-mono text-xs truncate flex-1 ${
+                      className={`font-mono text-xs flex-1 break-words leading-snug ${
                         s.decision === 'rejected'
                           ? 'line-through text-[color:var(--color-ink-subtle)]'
                           : ''

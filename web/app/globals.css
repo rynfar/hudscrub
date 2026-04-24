@@ -82,14 +82,14 @@ button {
   letter-spacing: 0;
   word-spacing: 0;
 }
-/* Selection: solid green box, no text bleed-through */
+/* Selection: warm amber/cream — green is reserved for actually-redacted spans */
 .pdfjs-text-layer ::selection {
-  background-color: rgba(15, 95, 61, 0.5);
+  background-color: rgba(183, 121, 31, 0.22);
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
 .pdfjs-text-layer ::-moz-selection {
-  background-color: rgba(15, 95, 61, 0.5);
+  background-color: rgba(183, 121, 31, 0.22);
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
