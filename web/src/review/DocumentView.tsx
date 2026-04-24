@@ -84,6 +84,8 @@ export function DocumentView({ doc }: Props) {
     updateSpan(doc.id, currentPage, spanId, { decision: 'accepted' });
   const rejectSpan = (spanId: string) =>
     updateSpan(doc.id, currentPage, spanId, { decision: 'rejected' });
+  const resetDecision = (spanId: string) =>
+    updateSpan(doc.id, currentPage, spanId, { decision: 'pending' });
   const acceptAll = () => {
     for (const s of spans) {
       if (s.decision === 'pending') updateSpan(doc.id, currentPage, s.id, { decision: 'accepted' });
@@ -156,6 +158,7 @@ export function DocumentView({ doc }: Props) {
           onSelect={setFocusedSpanId}
           onAccept={acceptSpan}
           onReject={rejectSpan}
+          onResetDecision={resetDecision}
         />
       </div>
 

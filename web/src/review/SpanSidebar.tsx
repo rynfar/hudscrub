@@ -10,6 +10,7 @@ interface Props {
   onSelect: (spanId: string) => void;
   onAccept: (spanId: string) => void;
   onReject: (spanId: string) => void;
+  onResetDecision: (spanId: string) => void;
 }
 
 const labelOrder = [
@@ -39,6 +40,7 @@ export function SpanSidebar({
   onSelect,
   onAccept,
   onReject,
+  onResetDecision,
 }: Props) {
   const byLabel = new Map<string, Span[]>();
   for (const s of spans) {
@@ -91,37 +93,57 @@ export function SpanSidebar({
                     }`}
                   >
                     <PillBadge tone={toneForSpan(s)}>·</PillBadge>
-                    <span className="font-mono text-xs truncate flex-1">{s.text}</span>
-                    {s.decision === 'accepted' && (
-                      <span className="text-[10px] text-[#16744D]">✓</span>
-                    )}
-                    {s.decision === 'rejected' && (
-                      <span className="text-[10px] text-[color:var(--color-ink-subtle)]">×</span>
-                    )}
-                    {s.decision === 'pending' && (
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAccept(s.id);
-                          }}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#16744D] text-white hover:bg-[#0F5F3D]"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onReject(s.id);
-                          }}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-[color:var(--color-surface-muted)] text-[color:var(--color-ink-muted)] hover:bg-[#ECEAE3]"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
+                    <span
+                      className={`font-mono text-xs truncate flex-1 ${
+                        s.decision === 'rejected'
+                          ? 'line-through text-[color:var(--color-ink-subtle)]'
+                          : ''
+                      }`}
+                    >
+                      {s.text}
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        title={
+                          s.decision === 'accepted'
+                            ? 'Accepted — click to undo'
+                            : 'Accept this span'
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (s.decision === 'accepted') onResetDecision(s.id);
+                          else onAccept(s.id);
+                        }}
+                        className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                          s.decision === 'accepted'
+                            ? 'bg-[#16744D] text-white hover:bg-[#0F5F3D]'
+                            : 'bg-[color:var(--color-surface-muted)] text-[color:var(--color-ink-muted)] hover:bg-[rgba(22,116,77,0.15)] hover:text-[#0F5F3D]'
+                        }`}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        title={
+                          s.decision === 'rejected'
+                            ? 'Rejected — click to undo'
+                            : 'Reject this span'
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (s.decision === 'rejected') onResetDecision(s.id);
+                          else onReject(s.id);
+                        }}
+                        className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                          s.decision === 'rejected'
+                            ? 'bg-[color:var(--color-ink)] text-[color:var(--color-bg)] hover:bg-[#2a2a2a]'
+                            : 'bg-[color:var(--color-surface-muted)] text-[color:var(--color-ink-muted)] hover:bg-[#ECEAE3] hover:text-[color:var(--color-ink)]'
+                        }`}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </motion.div>
                 </li>
               ))}
