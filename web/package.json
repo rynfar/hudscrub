@@ -1,0 +1,35 @@
+{
+  "name": "hudscrub-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-based HUD-1 PII redaction with human review",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'scripts/**/*.ts'",
+    "gen-fixtures": "tsx scripts/gen-fixtures.ts",
+    "redact": "tsx scripts/redact-cli.ts"
+  },
+  "dependencies": {
+    "mupdf": "latest",
+    "pdfjs-dist": "latest",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
