@@ -8,10 +8,11 @@ interface Props {
   page: RenderedPage;
   spans: Span[];
   focusedSpanId?: string | null;
+  detecting?: boolean;
   onSpanClick?: (spanId: string) => void;
 }
 
-export function PdfPage({ page, spans, focusedSpanId, onSpanClick }: Props) {
+export function PdfPage({ page, spans, focusedSpanId, detecting, onSpanClick }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +37,7 @@ export function PdfPage({ page, spans, focusedSpanId, onSpanClick }: Props) {
   return (
     <div
       data-pdf-page={page.pageNum}
-      className="relative bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)] mx-auto"
+      className={`relative bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)] mx-auto ${detecting ? 'ai-shimmer' : ''}`}
       style={{ width: page.width, height: page.height }}
     >
       <canvas ref={canvasRef} className="block" />

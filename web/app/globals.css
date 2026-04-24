@@ -39,3 +39,31 @@ html, body {
 button {
   cursor: pointer;
 }
+
+/* AI shimmer: a soft amber sweep that travels L→R across an element while
+   detection is running. Subtle so the PDF underneath stays readable. */
+@keyframes ai-shimmer {
+  0%   { background-position: -150% 0; }
+  100% { background-position: 250% 0; }
+}
+
+.ai-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.ai-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(183, 121, 31, 0.18) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: ai-shimmer 1.8s linear infinite;
+  mix-blend-mode: multiply;
+}
