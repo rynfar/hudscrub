@@ -6,7 +6,8 @@ export interface RenderedPage {
   height: number;
   text: string;
   textItems: Array<{ str: string; transform: number[]; width: number; height: number }>;
-  render: (canvas: HTMLCanvasElement) => Promise<void>;
+  /** Returns a cancel function to abort the render in flight. */
+  render: (canvas: HTMLCanvasElement) => { promise: Promise<void>; cancel: () => void };
   renderTextLayer: (container: HTMLDivElement) => Promise<void>;
 }
 
@@ -56,11 +57,25 @@ export async function loadPdfInBrowser(bytes: ArrayBuffer): Promise<LoadedBrowse
           width: it.width,
           height: it.height,
         })),
-        async render(canvas: HTMLCanvasElement) {
+        render(canvas: HTMLCanvasElement) {
           const ctx = canvas.getContext('2d')!;
           canvas.width = viewport.width;
           canvas.height = viewport.height;
-          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          const task = page.render({ canvasContext: ctx, viewport, canvas });
+          return {
+            promise: task.promise.catch((e: unknown) => {
+              // RenderingCancelledException is expected when StrictMode re-runs the effect.
+              if (e instanceof Error && e.name === 'RenderingCancelledException') return;
+              throw e;
+            }),
+            cancel: () => {
+              try {
+                task.cancel();
+              } catch {
+                // already finished — ignore
+              }
+            },
+          };
         },
         async renderTextLayer(container: HTMLDivElement) {
           const lib = await import('pdfjs-dist');

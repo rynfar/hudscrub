@@ -17,10 +17,20 @@ export function PdfPage({ page, spans, focusedSpanId, onSpanClick }: Props) {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    page.render(canvasRef.current).catch((e) => console.error('render failed', e));
+    let cancelled = false;
+    const task = page.render(canvasRef.current);
+    task.promise.catch((e) => {
+      if (!cancelled) console.error('render failed', e);
+    });
     if (textLayerRef.current) {
-      page.renderTextLayer(textLayerRef.current).catch((e) => console.error('text layer failed', e));
+      page.renderTextLayer(textLayerRef.current).catch((e) => {
+        if (!cancelled) console.error('text layer failed', e);
+      });
     }
+    return () => {
+      cancelled = true;
+      task.cancel();
+    };
   }, [page]);
 
   return (
