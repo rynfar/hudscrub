@@ -1,8 +1,18 @@
+'use client';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { AppHeader } from '@/src/ui/AppHeader';
 import { Button } from '@/src/ui/Button';
+import { useSettings } from '@/src/store/settings-store';
 
 export default function Home() {
+  const [destination, setDestination] = useState('/upload');
+  // Read settings on the client only — Zustand persist isn't hydrated during SSR.
+  const hasOnboarded = useSettings((s) => s.hasCompletedOnboarding);
+  useEffect(() => {
+    setDestination(hasOnboarded ? '/upload' : '/onboarding');
+  }, [hasOnboarded]);
+
   return (
     <>
       <AppHeader />
@@ -25,7 +35,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col items-center gap-3">
-            <Link href="/upload">
+            <Link href={destination}>
               <Button variant="primary" size="lg">
                 Get started
               </Button>
