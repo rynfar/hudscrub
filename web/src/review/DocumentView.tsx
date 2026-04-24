@@ -24,6 +24,7 @@ export function DocumentView({ doc }: Props) {
   const selectedModel = useSettings((s) => s.selectedModel);
   const updateSpan = useDocuments((s) => s.updateSpan);
   const addSpan = useDocuments((s) => s.addSpan);
+  const removeSpanAction = useDocuments((s) => s.removeSpan);
   const processingStatus = useProcessingStatus();
   void selectedModel;
 
@@ -55,10 +56,25 @@ export function DocumentView({ doc }: Props) {
 
   const acceptSpan = (spanId: string) =>
     updateSpan(doc.id, currentPage, spanId, { decision: 'accepted' });
-  const rejectSpan = (spanId: string) =>
-    updateSpan(doc.id, currentPage, spanId, { decision: 'rejected' });
-  const resetDecision = (spanId: string) =>
-    updateSpan(doc.id, currentPage, spanId, { decision: 'pending' });
+  // For user-added (manual) spans, "reject" and "undo accept" both mean remove
+  // — since the user explicitly added them, the only meaningful undo is delete.
+  // For detected spans, reject keeps them in the list with a strikethrough.
+  const isManual = (spanId: string) =>
+    spans.find((sp) => sp.id === spanId)?.source === 'manual';
+  const rejectSpan = (spanId: string) => {
+    if (isManual(spanId)) {
+      removeSpanAction(doc.id, currentPage, spanId);
+    } else {
+      updateSpan(doc.id, currentPage, spanId, { decision: 'rejected' });
+    }
+  };
+  const resetDecision = (spanId: string) => {
+    if (isManual(spanId)) {
+      removeSpanAction(doc.id, currentPage, spanId);
+    } else {
+      updateSpan(doc.id, currentPage, spanId, { decision: 'pending' });
+    }
+  };
   const acceptAll = () => {
     for (const s of spans) {
       if (s.decision === 'pending') updateSpan(doc.id, currentPage, s.id, { decision: 'accepted' });
