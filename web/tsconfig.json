@@ -13,10 +13,41 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "allowJs": true,
+    "noEmit": true
   },
-  "include": ["src/**/*", "tests/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "app/**/*",
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".next"
+  ]
 }
