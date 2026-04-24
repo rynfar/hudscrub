@@ -127,6 +127,15 @@ export const useSettings = create<Settings & SettingsActions>()(
       }),
       partialize: ({ set: _set, reset: _reset, markInstalled: _mi, ...state }) => state,
       version: 1,
+      // Old persisted data (pre-v1, with old model IDs like 'phi-4-mini') is incompatible.
+      // Drop it and rebuild from defaults — the user just re-picks their model in Settings.
+      migrate: (persisted: unknown, fromVersion: number) => {
+        if (fromVersion < 1) {
+          // Discard old shape entirely
+          return { ...DEFAULTS };
+        }
+        return persisted as Settings;
+      },
     },
   ),
 );
