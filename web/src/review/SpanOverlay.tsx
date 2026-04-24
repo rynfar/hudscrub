@@ -12,50 +12,37 @@ interface Props {
   onClick?: () => void;
 }
 
-interface StyleState {
-  className: string;
-  strikethrough: boolean;
-  strikethroughColor?: string;
-}
-
-const styleByState = (s: Span): StyleState => {
+const styleByState = (s: Span): { className: string } => {
   if (s.decision === 'accepted') {
-    // Light green tint with a strong horizontal strike-through to read as redaction.
+    // Medium-opacity dark green: text underneath is still legible while clearly marked.
     return {
-      className: 'bg-[rgba(15,95,61,0.12)] border-[1.5px] border-[#0F5F3D]',
-      strikethrough: true,
-      strikethroughColor: '#0F5F3D',
+      className: 'bg-[rgba(15,95,61,0.5)] border-[1.5px] border-[#0F5F3D]',
     };
   }
   if (s.decision === 'rejected') {
     return {
       className:
         'bg-transparent border border-dashed border-[color:var(--color-ink-subtle)]',
-      strikethrough: false,
     };
   }
   if (s.source === 'manual') {
     return {
       className: 'bg-[rgba(107,79,163,0.06)] border-[1.5px] border-[#6B4FA3]',
-      strikethrough: false,
     };
   }
   if (s.source === 'regex') {
     return {
       className: 'bg-[rgba(22,116,77,0.06)] border-[1.5px] border-[#16744D]',
-      strikethrough: false,
     };
   }
   if (s.confidence < 0.85) {
     return {
       className:
         'bg-[rgba(194,94,26,0.06)] border-[1.5px] border-dashed border-[#C25E1A]',
-      strikethrough: false,
     };
   }
   return {
     className: 'bg-[rgba(183,121,31,0.06)] border-[1.5px] border-[#B7791F]',
-    strikethrough: false,
   };
 };
 
@@ -74,7 +61,7 @@ export function SpanOverlay({
   const top = span.bbox.y * sy;
   const width = span.bbox.width * sx;
   const height = span.bbox.height * sy;
-  const { className, strikethrough, strikethroughColor } = styleByState(span);
+  const { className } = styleByState(span);
 
   return (
     <motion.button
@@ -92,18 +79,6 @@ export function SpanOverlay({
       className={`absolute rounded-[2px] ${className}`}
       style={{ left, top, width, height }}
       aria-label={`${span.label}: ${span.text}`}
-    >
-      {strikethrough && (
-        <span
-          aria-hidden
-          className="absolute left-0 right-0 top-1/2 pointer-events-none"
-          style={{
-            height: 2,
-            backgroundColor: strikethroughColor ?? '#0F5F3D',
-            transform: 'translateY(-50%)',
-          }}
-        />
-      )}
-    </motion.button>
+    />
   );
 }
