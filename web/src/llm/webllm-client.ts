@@ -27,8 +27,13 @@ export async function loadWebLlmEngine(
     onProgress?.({ status: 'ready', progress: 1.0 });
     return cached.engine;
   }
-  const mlc = await import('@mlc-ai/web-llm');
   const modelId = WEBLLM_MODEL_IDS[modelKey];
+  if (typeof modelId !== 'string' || modelId.length === 0) {
+    throw new Error(
+      `WebLLM model key "${modelKey}" has no valid model ID — likely a stale settings value. Pick a model again in Settings.`,
+    );
+  }
+  const mlc = await import('@mlc-ai/web-llm');
 
   const engine = await mlc.CreateMLCEngine(modelId, {
     initProgressCallback: (p) => {

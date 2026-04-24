@@ -27,6 +27,14 @@ async function ensureWorker() {
 }
 
 export async function loadPdfInBrowser(bytes: ArrayBuffer): Promise<LoadedBrowserPdf> {
+  if (!(bytes instanceof ArrayBuffer)) {
+    throw new Error(
+      `loadPdfInBrowser expected ArrayBuffer, got ${typeof bytes} (${Object.prototype.toString.call(bytes)})`,
+    );
+  }
+  if (bytes.byteLength === 0) {
+    throw new Error('loadPdfInBrowser received an empty ArrayBuffer (0 bytes)');
+  }
   await ensureWorker();
   const pdfjsLib = await import('pdfjs-dist');
   // PDF.js transfers the ArrayBuffer to its worker (detaching the original).

@@ -34,12 +34,23 @@ export async function getDetectors(opts: {
       });
       webllmSingletons[opts.selectedModel] = detector;
     }
-    await detector.ensureLoaded((p) => {
-      if (opts.onLoadProgress) opts.onLoadProgress(p.progress);
-    });
-    out.push(detector);
+    try {
+      await detector.ensureLoaded((p) => {
+        if (opts.onLoadProgress) opts.onLoadProgress(p.progress);
+      });
+      out.push(detector);
+    } catch (e) {
+      console.warn(
+        `[detection] Failed to load ${opts.selectedModel}, falling back to regex-only:`,
+        e,
+      );
+      // Fall through with regex-only — don't break the whole flow.
+    }
+  } else {
+    console.warn(
+      `[detection] Unknown selectedModel "${opts.selectedModel}", using regex-only.`,
+    );
   }
-  // 'regex-only' or unknown: return regex only
   return out;
 }
 
