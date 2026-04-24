@@ -74,12 +74,19 @@ export function SpanSidebar({
             <ul>
               {byLabel.get(label)!.map((s) => (
                 <li key={s.id}>
-                  <motion.button
-                    type="button"
+                  <motion.div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelect(s.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelect(s.id);
+                      }
+                    }}
                     whileHover={{ backgroundColor: 'rgba(26, 26, 26, 0.03)' }}
                     transition={{ duration: 0.12 }}
-                    className={`w-full text-left px-5 py-2 flex items-center gap-3 ${
+                    className={`w-full text-left px-5 py-2 flex items-center gap-3 cursor-pointer ${
                       focusedSpanId === s.id ? 'bg-[color:var(--color-surface-muted)]' : ''
                     }`}
                   >
@@ -115,7 +122,7 @@ export function SpanSidebar({
                         </button>
                       </div>
                     )}
-                  </motion.button>
+                  </motion.div>
                 </li>
               ))}
             </ul>
