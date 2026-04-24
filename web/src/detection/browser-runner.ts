@@ -109,13 +109,18 @@ export async function detectDocument(
   onPageDone: (pageNum: number, spans: Span[]) => void,
 ): Promise<void> {
   for (const page of pages) {
-    const detected = await detectPage(page.text, detectors);
-    const lookup = pageToBboxLookup(page);
-    const spansWithBoxes: Span[] = [];
-    for (const s of detected) {
-      const bb = lookup(s.start, s.end);
-      if (!bb) continue;
-      spansWithBoxes.push({ ...s, bbox: { ...bb, pageNum: page.pageNum } });
+    let spansWithBoxes: Span[] = [];
+    try {
+      const detected = await detectPage(page.text, detectors);
+      const lookup = pageToBboxLookup(page);
+      for (const s of detected) {
+        const bb = lookup(s.start, s.end);
+        if (!bb) continue;
+        spansWithBoxes.push({ ...s, bbox: { ...bb, pageNum: page.pageNum } });
+      }
+    } catch (e) {
+      console.error(`[detection] page ${page.pageNum} failed; emitting empty span list:`, e);
+      spansWithBoxes = [];
     }
     onPageDone(page.pageNum, spansWithBoxes);
     await new Promise((r) => setTimeout(r, 0));

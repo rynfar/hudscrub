@@ -61,14 +61,21 @@ export async function generateJson(
   systemPrompt: string,
   userPrompt: string,
 ): Promise<string> {
+  // NOTE: Intentionally no `response_format`. WebLLM's grammar-constrained JSON
+  // mode requires a schema string for some model libs (e.g. Gemma 2) and throws
+  // "Cannot pass non-string to std::string" at the WASM boundary if it's missing.
+  // Our prompts already instruct {"entities": [...]} output and we tolerate
+  // parse failures gracefully in parseEntities().
+  const sys = typeof systemPrompt === 'string' ? systemPrompt : '';
+  const usr = typeof userPrompt === 'string' ? userPrompt : '';
+  if (sys.length === 0 || usr.length === 0) return '';
   const reply = await engine.chat.completions.create({
     messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
+      { role: 'system', content: sys },
+      { role: 'user', content: usr },
     ],
     temperature: 0.1,
     max_tokens: 800,
-    response_format: { type: 'json_object' },
   });
   return reply.choices[0]?.message?.content ?? '';
 }
