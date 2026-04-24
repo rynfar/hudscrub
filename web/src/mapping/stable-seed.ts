@@ -1,20 +1,9 @@
 /**
  * Compute a deterministic 52-bit integer seed from `salt::original` using SHA-256.
- * Works in both Node and browser via the Web Crypto API (synchronous fallback in Node).
+ * Pure-JS implementation so it works identically in Node and browsers without env branches.
  */
 export function stableSeed(original: string, salt: string): number {
-  const input = `${salt}::${original}`;
-  // Use Node's createHash if available (synchronous, preferred for tests),
-  // otherwise fall back to a synchronous JS SHA-256 via a precomputed hash.
-  // Both paths return the same hex output for identical input.
-  if (typeof process !== 'undefined' && process.versions?.node) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createHash } = require('node:crypto');
-    const h = createHash('sha256').update(input).digest('hex');
-    return parseInt(h.slice(0, 13), 16);
-  }
-  // Browser: use synchronous JS SHA-256 (small inline impl).
-  return parseInt(sha256Hex(input).slice(0, 13), 16);
+  return parseInt(sha256Hex(`${salt}::${original}`).slice(0, 13), 16);
 }
 
 // Minimal synchronous SHA-256 (browser path). Source: public-domain JS implementation.
