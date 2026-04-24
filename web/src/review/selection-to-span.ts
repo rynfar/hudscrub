@@ -4,6 +4,40 @@ import type { Span } from '@/src/types';
 const SCALE = 1.5;
 
 /**
+ * Locate `needle` in `haystack` with whitespace tolerance — selections often
+ * include newlines that don't appear in the joined page text. Returns the
+ * position in the original haystack so character offsets stay correct.
+ */
+function locateInPageText(
+  haystack: string,
+  needle: string,
+): { start: number; end: number } | null {
+  const trimmed = needle.trim();
+  if (trimmed.length < 1) return null;
+  const exact = haystack.indexOf(trimmed);
+  if (exact >= 0) return { start: exact, end: exact + trimmed.length };
+
+  // Whitespace-collapsed match: build an index that maps positions in a
+  // whitespace-stripped form back to positions in the original.
+  const positions: number[] = [];
+  let stripped = '';
+  for (let i = 0; i < haystack.length; i++) {
+    if (!/\s/.test(haystack[i])) {
+      positions.push(i);
+      stripped += haystack[i];
+    }
+  }
+  const needleStripped = trimmed.replace(/\s+/g, '');
+  if (needleStripped.length < 1) return null;
+  const idx = stripped.indexOf(needleStripped);
+  if (idx < 0) return null;
+  const start = positions[idx];
+  const lastChar = positions[idx + needleStripped.length - 1];
+  if (lastChar === undefined) return null;
+  return { start, end: lastChar + 1 };
+}
+
+/**
  * Convert the current window selection (must be inside a [data-pdf-page="N"]
  * container) into a manual Span. Returns null if no valid selection.
  */
@@ -35,12 +69,15 @@ export function selectionToSpan(pageNum: number, pageText: string): Span | null 
   const pdfW = cssW / SCALE;
   const pdfH = cssH / SCALE;
 
-  let start = pageText.indexOf(text);
-  let end = start >= 0 ? start + text.length : 0;
+  // Find the selection in pageText. Try exact match first, then a whitespace-
+  // tolerant match (selections often span newlines while pageText uses single
+  // spaces, so plain indexOf fails on multi-line selections).
+  const located = locateInPageText(pageText, text);
+  let start = located?.start ?? -1;
+  let end = located?.end ?? 0;
 
-  // PDF.js text-layer spans are per-text-item; selection often clips mid-word.
-  // If the captured selection ends inside a word, push the boundary outward
-  // to the next non-word character so the user sees the full thing.
+  // Expand to word boundaries — PDF.js text-layer spans are per-text-item, so
+  // selections often clip mid-word. Push outward until non-word char.
   if (start >= 0 && end > 0) {
     const isWord = (c: string | undefined) => !!c && /[A-Za-z0-9]/.test(c);
     while (start > 0 && isWord(pageText[start - 1]) && isWord(pageText[start])) {
