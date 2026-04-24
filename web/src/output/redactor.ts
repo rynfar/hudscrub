@@ -9,6 +9,7 @@ interface MupdfAnnotation {
   setRect(rect: number[]): void;
   setContents(text: string): void;
   setColor(color: number[]): void;
+  setDefaultAppearance?: (font: string, size: number, color: number[]) => void;
   update(): boolean;
   getContents(): string;
   getRect(): number[];
@@ -41,39 +42,68 @@ export async function redactDocument(
     // Step 1: Add Redact annotations and apply them (removes original text from content stream)
     for (const s of pageSpans) {
       const rect = [
-        s.bbox.x,
-        s.bbox.y,
-        s.bbox.x + s.bbox.width,
-        s.bbox.y + s.bbox.height,
+        Number(s.bbox.x),
+        Number(s.bbox.y),
+        Number(s.bbox.x + s.bbox.width),
+        Number(s.bbox.y + s.bbox.height),
       ];
-      const annot = page.createAnnotation('Redact');
-      annot.setRect(rect);
+      if (rect.some((n) => !Number.isFinite(n))) {
+        console.warn('Skipping span with invalid bbox:', s);
+        continue;
+      }
+      try {
+        const annot = page.createAnnotation('Redact');
+        annot.setRect(rect);
+      } catch (e) {
+        console.error('Failed to create Redact annotation for span:', s, e);
+      }
     }
-    // applyRedactions(blackBoxes, imageMethod):
-    //   blackBoxes: true draws black rectangle where text was (redact mode visual)
-    //   imageMethod: 0=none, 1=remove, 2=pixelate
     const drawBlackBox = opts.mode === 'redact';
     const imageMethod = opts.mode === 'redact' ? 1 : 0;
-    page.applyRedactions(drawBlackBox, imageMethod);
+    try {
+      page.applyRedactions(drawBlackBox, imageMethod);
+    } catch (e) {
+      console.error(`Failed to applyRedactions on page ${pageNum}:`, e);
+      throw e;
+    }
 
-    // Step 2 (sandbox only): Add FreeText annotations with replacement text overlaid at the same rect.
-    // Note: FreeText annotations render visibly in PDF viewers but do not appear in
-    // page.toStructuredText() output. Verification of sandbox replacements at integration-test
-    // time uses page.getAnnotations() to read the FreeText contents back.
+    // Step 2 (sandbox only): Add FreeText annotations with replacement text.
     if (opts.mode === 'sandbox') {
       for (const s of pageSpans) {
-        if (!s.replacement) continue;
+        // Type-guard: replacement must be a non-empty string. mupdf's setContents
+        // throws "Cannot pass non-string to std::string" if anything else slips through.
+        if (typeof s.replacement !== 'string' || s.replacement.length === 0) continue;
         const rect = [
-          s.bbox.x,
-          s.bbox.y,
-          s.bbox.x + s.bbox.width,
-          s.bbox.y + s.bbox.height,
+          Number(s.bbox.x),
+          Number(s.bbox.y),
+          Number(s.bbox.x + s.bbox.width),
+          Number(s.bbox.y + s.bbox.height),
         ];
-        const ft = page.createAnnotation('FreeText');
-        ft.setRect(rect);
-        ft.setContents(s.replacement);
-        ft.setColor([0, 0, 0]);
-        ft.update();
+        if (rect.some((n) => !Number.isFinite(n))) {
+          console.warn('Skipping sandbox span with invalid bbox:', s);
+          continue;
+        }
+        try {
+          const ft = page.createAnnotation('FreeText');
+          ft.setRect(rect);
+          ft.setContents(String(s.replacement));
+          ft.setColor([0, 0, 0]);
+          // Some mupdf builds want a default appearance set explicitly so update() can render.
+          if (typeof ft.setDefaultAppearance === 'function') {
+            try {
+              ft.setDefaultAppearance('Helv', 9, [0, 0, 0]);
+            } catch {
+              /* not fatal */
+            }
+          }
+          ft.update();
+        } catch (e) {
+          console.error(
+            'Failed to add FreeText annotation for replacement:',
+            { text: s.text, replacement: s.replacement, type: typeof s.replacement },
+            e,
+          );
+        }
       }
     }
   }

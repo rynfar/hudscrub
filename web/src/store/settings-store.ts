@@ -97,11 +97,6 @@ interface SettingsActions {
   markInstalled: (id: ModelId) => void;
 }
 
-const safeStorage = () =>
-  typeof window !== 'undefined'
-    ? localStorage
-    : { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-
 export const useSettings = create<Settings & SettingsActions>()(
   persist(
     (set) => ({
@@ -117,8 +112,21 @@ export const useSettings = create<Settings & SettingsActions>()(
     }),
     {
       name: 'hudscrub.settings.v1',
-      storage: createJSONStorage(safeStorage),
+      // Use a no-op stub during SSR / tests so persist doesn't crash.
+      // The persist middleware re-evaluates this lazily, picking up the real
+      // localStorage when the client takes over.
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: ({ set: _set, reset: _reset, markInstalled: _mi, ...state }) => state,
+      version: 1,
     },
   ),
 );

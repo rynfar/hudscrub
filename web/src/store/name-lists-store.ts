@@ -25,11 +25,6 @@ interface NameListsActions {
   removeEntry: (id: string, original: string) => void;
 }
 
-const safeStorage = () =>
-  typeof window !== 'undefined'
-    ? localStorage
-    : { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-
 export const useNameLists = create<NameListsState & NameListsActions>()(
   persist(
     (set) => ({
@@ -64,7 +59,16 @@ export const useNameLists = create<NameListsState & NameListsActions>()(
     }),
     {
       name: 'hudscrub.namelists.v1',
-      storage: createJSONStorage(safeStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage;
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
       partialize: ({ lists }) => ({ lists }),
     },
   ),
