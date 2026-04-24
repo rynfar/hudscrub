@@ -49,6 +49,8 @@ interface Entry {
   end: number;
 }
 
+const RENDER_SCALE = 1.5;
+
 function pageToBboxLookup(page: RenderedPage) {
   const entries: Entry[] = [];
   let cursor = 0;
@@ -56,6 +58,9 @@ function pageToBboxLookup(page: RenderedPage) {
     entries.push({ item: it, start: cursor, end: cursor + it.str.length });
     cursor += it.str.length + 1;
   }
+  // page.width/height are in CSS pixels at RENDER_SCALE.
+  // PDF user-space dimensions:
+  const pdfPageHeightUS = page.height / RENDER_SCALE;
   return (start: number, end: number) => {
     const overlapping = entries.filter((e) => e.start < end && start < e.end);
     if (overlapping.length === 0) return null;
@@ -66,14 +71,18 @@ function pageToBboxLookup(page: RenderedPage) {
     for (const o of overlapping) {
       const t = o.item.transform;
       const x = t[4];
-      const yBaseline = t[5];
+      // PDF text-item transform[5] is the y baseline in PDF user-space (origin bottom-left).
+      // SpanOverlay scales bbox by (page.width / pdfWidth) where pdfWidth = page.width/1.5,
+      // so we return x/y in PDF user-space coords with origin TOP-left (y flipped).
+      const yBaselineUS = t[5];
       const w = o.item.width;
       const h = o.item.height || 12;
-      const yTop = yBaseline - h;
+      // Top of the text in flipped (viewport-aligned) PDF user-space:
+      const yTopFlipped = pdfPageHeightUS - yBaselineUS - h;
       minX = Math.min(minX, x);
-      minY = Math.min(minY, yTop);
+      minY = Math.min(minY, yTopFlipped);
       maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, yTop + h);
+      maxY = Math.max(maxY, yTopFlipped + h);
     }
     if (!isFinite(minX)) return null;
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
