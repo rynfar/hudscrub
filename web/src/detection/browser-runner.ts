@@ -77,8 +77,11 @@ function pageToBboxLookup(page: RenderedPage) {
       const yBaselineUS = t[5];
       const w = o.item.width;
       const h = o.item.height || 12;
-      // Top of the text in flipped (viewport-aligned) PDF user-space:
-      const yTopFlipped = pdfPageHeightUS - yBaselineUS - h;
+      // Top of the text in flipped (viewport-aligned) PDF user-space.
+      // PDF text height includes the full font metric (ascender + descender), but visible
+      // glyphs sit closer to the baseline. We pull the box top down by ~15% of font height
+      // so the rectangle frames the visible text instead of floating slightly above it.
+      const yTopFlipped = pdfPageHeightUS - yBaselineUS - h * 0.85;
       minX = Math.min(minX, x);
       minY = Math.min(minY, yTopFlipped);
       maxX = Math.max(maxX, x + w);
