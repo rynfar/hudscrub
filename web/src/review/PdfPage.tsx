@@ -40,20 +40,16 @@ export function PdfPage({ page, spans, focusedSpanId, detecting, onSpanClick }: 
       className={`relative bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)] mx-auto ${detecting ? 'ai-shimmer' : ''}`}
       style={{ width: page.width, height: page.height }}
     >
-      <canvas ref={canvasRef} className="block" />
-      {/* Text layer for native browser selection. PDF.js sets up absolutely-positioned spans inside.
-          Pointer events: auto to allow selection; the span overlays sit on a higher z-index. */}
+      <canvas ref={canvasRef} className="block relative z-[1]" />
+      {/* Text layer overlays the canvas with transparent absolutely-positioned spans
+          that the browser can natively select. PDF.js fills this on render. */}
       <div
         ref={textLayerRef}
-        className="absolute inset-0 select-text leading-none"
-        style={{
-          color: 'transparent',
-          // Match PDF.js TextLayer expected dimensions
-          width: page.width,
-          height: page.height,
-        }}
+        className="pdfjs-text-layer"
+        style={{ width: page.width, height: page.height }}
       />
-      <div className="absolute inset-0 pointer-events-none">
+      {/* Span overlays sit above the text layer so they're clickable. */}
+      <div className="absolute inset-0 pointer-events-none z-[3]">
         {spans.map((s) => (
           <div key={s.id} className="pointer-events-auto">
             <SpanOverlay

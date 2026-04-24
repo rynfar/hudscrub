@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDocuments, type DocumentSession } from '@/src/store/document-store';
 import { useSettings, MODELS } from '@/src/store/settings-store';
 import { loadPdfInBrowser, type RenderedPage } from '@/src/pdf/browser-renderer';
@@ -9,6 +9,8 @@ import { KeyboardLayer } from './KeyboardLayer';
 import { ExportButton } from './ExportButton';
 import { ExportAllButton } from './ExportAllButton';
 import { ManualSelect } from './ManualSelect';
+import { SelectionToolbar } from './SelectionToolbar';
+import { selectionToSpan } from './selection-to-span';
 import { DocumentQueue } from './DocumentQueue';
 import { Kbd } from '@/src/ui/Kbd';
 import { useProcessingStatus } from '@/src/processing/runner';
@@ -28,6 +30,7 @@ export function DocumentView({ doc }: Props) {
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [focusedSpanId, setFocusedSpanId] = useState<string | null>(null);
+  const pdfScopeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +91,7 @@ export function DocumentView({ doc }: Props) {
 
       <div className="flex flex-1 overflow-hidden bg-[color:var(--color-surface-muted)]">
         <DocumentQueue documents={Object.values(useDocuments.getState().documents)} activeId={doc.id} />
-        <div className="flex-1 overflow-auto py-8 px-6">
+        <div className="flex-1 overflow-auto py-8 px-6 relative" ref={pdfScopeRef}>
           {pages.length === 0 && (
             <p className="text-center text-sm text-[color:var(--color-ink-muted)]">
               Loading PDF…
@@ -171,13 +174,20 @@ export function DocumentView({ doc }: Props) {
         onPrevPage={() => setCurrentPage((p) => Math.max(0, p - 1))}
       />
       {renderedPage && pageState && (
-        <ManualSelect
-          pageText={pageState.text}
-          pageNum={currentPage}
-          pageWidth={renderedPage.width}
-          pageHeight={renderedPage.height}
-          onAdd={(span) => addSpan(doc.id, currentPage, span)}
-        />
+        <>
+          <ManualSelect
+            pageText={pageState.text}
+            pageNum={currentPage}
+            onAdd={(span) => addSpan(doc.id, currentPage, span)}
+          />
+          <SelectionToolbar
+            scopeRef={pdfScopeRef}
+            onAddRedaction={() => {
+              const span = selectionToSpan(currentPage, pageState.text);
+              if (span) addSpan(doc.id, currentPage, span);
+            }}
+          />
+        </>
       )}
     </div>
   );

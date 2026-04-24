@@ -51,6 +51,34 @@ button {
   position: relative;
   overflow: hidden;
 }
+/* PDF.js text layer — required CSS for the absolutely-positioned, transparent
+   text spans that PDF.js renders to enable native selection over the canvas.
+   Without these rules, the spans flow as block content (the bug). */
+.pdfjs-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+  forced-color-adjust: none;
+  z-index: 2;
+}
+.pdfjs-text-layer span,
+.pdfjs-text-layer br {
+  position: absolute;
+  white-space: pre;
+  color: transparent;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.pdfjs-text-layer ::selection {
+  background-color: rgba(183, 121, 31, 0.35);
+}
+
 .ai-shimmer::after {
   content: "";
   position: absolute;
