@@ -73,7 +73,7 @@ export class WebLlmDetector implements Detector {
           end,
           bbox: { x: 0, y: 0, width: 0, height: 0, pageNum: -1 },
           confidence: 0.85,
-          decision: 'pending',
+          decision: 'accepted',
         });
       }
     }

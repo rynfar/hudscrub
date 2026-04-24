@@ -60,7 +60,7 @@ export class NerDetector implements Detector {
         end: g.end,
         bbox: { x: 0, y: 0, width: 0, height: 0, pageNum: -1 },
         confidence: g.score,
-        decision: 'pending',
+        decision: 'accepted',
       });
     }
     return out;

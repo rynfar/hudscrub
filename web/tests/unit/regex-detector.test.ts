@@ -16,10 +16,10 @@ describe('RegexDetector', () => {
     expect(spans.every((s) => s.source === 'regex')).toBe(true);
     expect(spans.every((s) => s.confidence === 1.0)).toBe(true);
   });
-  it('all spans start as pending', async () => {
+  it('all spans start as accepted (safer default — user un-accepts false positives)', async () => {
     const d = new RegexDetector();
     const spans = await d.detect('SSN 123-45-6789', []);
-    expect(spans.every((s) => s.decision === 'pending')).toBe(true);
+    expect(spans.every((s) => s.decision === 'accepted')).toBe(true);
   });
   it('span text matches text.slice(start, end)', async () => {
     const d = new RegexDetector();

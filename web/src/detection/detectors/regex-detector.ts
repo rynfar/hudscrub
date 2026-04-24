@@ -24,7 +24,7 @@ export class RegexDetector implements Detector {
         end: m.end,
         bbox: { x: 0, y: 0, width: 0, height: 0, pageNum: -1 },
         confidence: 1.0,
-        decision: 'pending',
+        decision: 'accepted',
       });
     }
     return out;
