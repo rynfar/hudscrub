@@ -8,6 +8,7 @@ import { PdfPage } from './PdfPage';
 import { SpanSidebar } from './SpanSidebar';
 import { KeyboardLayer } from './KeyboardLayer';
 import { ExportButton } from './ExportButton';
+import { ManualSelect } from './ManualSelect';
 import { Kbd } from '@/src/ui/Kbd';
 
 interface Props {
@@ -19,6 +20,7 @@ export function DocumentView({ doc }: Props) {
   const setStatus = useDocuments((s) => s.setStatus);
   const setPage = useDocuments((s) => s.setPage);
   const updateSpan = useDocuments((s) => s.updateSpan);
+  const addSpan = useDocuments((s) => s.addSpan);
 
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -172,6 +174,9 @@ export function DocumentView({ doc }: Props) {
         <span className="flex items-center gap-1.5">
           <Kbd>N</Kbd>/<Kbd>P</Kbd> page nav
         </span>
+        <span className="flex items-center gap-1.5">
+          <Kbd>R</Kbd> add manual (after selecting text)
+        </span>
       </div>
 
       <KeyboardLayer
@@ -184,6 +189,15 @@ export function DocumentView({ doc }: Props) {
         onNextPage={() => setCurrentPage((p) => Math.min(pages.length - 1, p + 1))}
         onPrevPage={() => setCurrentPage((p) => Math.max(0, p - 1))}
       />
+      {renderedPage && pageState && (
+        <ManualSelect
+          pageText={pageState.text}
+          pageNum={currentPage}
+          pageWidth={renderedPage.width}
+          pageHeight={renderedPage.height}
+          onAdd={(span) => addSpan(doc.id, currentPage, span)}
+        />
+      )}
     </div>
   );
 }

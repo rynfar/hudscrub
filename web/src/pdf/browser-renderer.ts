@@ -7,6 +7,7 @@ export interface RenderedPage {
   text: string;
   textItems: Array<{ str: string; transform: number[]; width: number; height: number }>;
   render: (canvas: HTMLCanvasElement) => Promise<void>;
+  renderTextLayer: (container: HTMLDivElement) => Promise<void>;
 }
 
 export interface LoadedBrowserPdf {
@@ -57,6 +58,22 @@ export async function loadPdfInBrowser(bytes: ArrayBuffer): Promise<LoadedBrowse
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        },
+        async renderTextLayer(container: HTMLDivElement) {
+          const lib = await import('pdfjs-dist');
+          // pdfjs-dist >= 4 exposes a TextLayer class
+          const TextLayer = (lib as unknown as { TextLayer: new (opts: object) => { render(): Promise<void> } })
+            .TextLayer;
+          if (!TextLayer) {
+            throw new Error('pdfjs-dist TextLayer not found — version mismatch');
+          }
+          container.innerHTML = '';
+          const tl = new TextLayer({
+            textContentSource: textContent,
+            container,
+            viewport,
+          });
+          await tl.render();
         },
       };
     },
