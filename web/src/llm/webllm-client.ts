@@ -72,10 +72,10 @@ export async function generateJson(
   const reply = await engine.chat.completions.create({
     messages: [
       { role: 'system', content: sys },
-      { role: 'user', content: usr },
+      { role: 'user', content: `Page text to scan:\n\n${usr}\n\nNow output the JSON.` },
     ],
-    temperature: 0.1,
-    max_tokens: 800,
+    temperature: 0.0,
+    max_tokens: 1500,
   });
   return reply.choices[0]?.message?.content ?? '';
 }
