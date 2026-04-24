@@ -72,14 +72,26 @@ button {
   position: absolute;
   white-space: pre;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   cursor: text;
   transform-origin: 0% 0%;
+  /* Kill any browser text decoration / metric quirks that make the ghost text show */
+  text-shadow: none;
+  font-feature-settings: normal;
+  font-variant-ligatures: none;
+  letter-spacing: 0;
+  word-spacing: 0;
 }
+/* Selection: solid green box, no text bleed-through */
 .pdfjs-text-layer ::selection {
-  background-color: rgba(15, 95, 61, 0.22);
+  background-color: rgba(15, 95, 61, 0.5);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 .pdfjs-text-layer ::-moz-selection {
-  background-color: rgba(15, 95, 61, 0.22);
+  background-color: rgba(15, 95, 61, 0.5);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 .ai-shimmer::after {
