@@ -89,9 +89,6 @@ export function SelectionToolbar({ scopeRef, onAddRedaction }: Props) {
           >
             Redact this
           </button>
-          <span className="text-[color:var(--color-ink-subtle)] text-[10px] font-mono">
-            or press R
-          </span>
         </motion.div>
       )}
     </AnimatePresence>
