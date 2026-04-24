@@ -28,7 +28,10 @@ async function ensureWorker() {
 export async function loadPdfInBrowser(bytes: ArrayBuffer): Promise<LoadedBrowserPdf> {
   await ensureWorker();
   const pdfjsLib = await import('pdfjs-dist');
-  const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
+  // PDF.js transfers the ArrayBuffer to its worker (detaching the original).
+  // Clone so React StrictMode double-effect or repeat opens stay safe.
+  const cloned = bytes.slice(0);
+  const doc = await pdfjsLib.getDocument({ data: cloned }).promise;
   return {
     numPages: doc.numPages,
     async getPage(pageIndex: number) {

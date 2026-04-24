@@ -2,7 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Mode, SpanLabel } from '../types';
 
-export type ModelId = 'bert-ner' | 'phi-4-mini' | 'gemma-3-4b' | 'qwen-2.5-7b' | 'regex-only';
+export type ModelId =
+  | 'bert-ner'
+  | 'phi-3.5-mini'
+  | 'gemma-2-2b'
+  | 'qwen-2.5-7b'
+  | 'regex-only';
 
 export interface ModelOption {
   id: ModelId;
@@ -25,21 +30,21 @@ export const MODELS: ModelOption[] = [
     requiresWebGPU: false,
   },
   {
-    id: 'phi-4-mini',
-    name: 'Balanced — recommended',
-    sizeLabel: '2.3 GB',
+    id: 'phi-3.5-mini',
+    name: 'Balanced — recommended (Phi-3.5-mini)',
+    sizeLabel: '2.2 GB',
     speedLabel: '~5s/page',
     qualityLabel: 'High',
-    description: 'Best for most users. ~3 minutes for a 10-page document.',
+    description: 'Microsoft Phi-3.5-mini, 4-bit quantized. Strong instruction following.',
     requiresWebGPU: true,
   },
   {
-    id: 'gemma-3-4b',
-    name: 'High quality (Gemma 3 4B)',
-    sizeLabel: '2.5 GB',
-    speedLabel: '~5s/page',
+    id: 'gemma-2-2b',
+    name: 'Compact (Gemma 2 2B)',
+    sizeLabel: '1.5 GB',
+    speedLabel: '~3s/page',
     qualityLabel: 'High',
-    description: 'Different strengths than Balanced.',
+    description: "Google's on-device model. Smaller download than Phi.",
     requiresWebGPU: true,
   },
   {
@@ -48,7 +53,7 @@ export const MODELS: ModelOption[] = [
     sizeLabel: '4.5 GB',
     speedLabel: '~12s/page',
     qualityLabel: 'Highest',
-    description: 'M-series Mac or RTX 3060+ recommended.',
+    description: 'Qwen 2.5 7B. M-series Mac or RTX 3060+ recommended.',
     requiresWebGPU: true,
   },
   {

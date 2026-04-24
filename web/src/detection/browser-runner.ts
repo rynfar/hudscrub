@@ -3,17 +3,22 @@ import { detectPage } from '@/src/detection/index';
 import { RegexDetector } from '@/src/detection/detectors/regex-detector';
 import { NerDetector } from '@/src/detection/ner/ner-detector';
 import { loadTransformersNer } from '@/src/detection/ner/transformers-loader';
+import { WebLlmDetector } from '@/src/llm/webllm-detector';
 import type { Span, Detector } from '@/src/types';
 import type { RenderedPage } from '@/src/pdf/browser-renderer';
+import type { ModelId } from '@/src/store/settings-store';
 
 let nerSingleton: NerDetector | null = null;
+const webllmSingletons: Partial<Record<ModelId, WebLlmDetector>> = {};
+
+const WEBLLM_KEYS: ReadonlyArray<ModelId> = ['phi-3.5-mini', 'gemma-2-2b', 'qwen-2.5-7b'];
 
 export async function getDetectors(opts: {
-  useNer: boolean;
+  selectedModel: ModelId;
   onLoadProgress?: (p: number) => void;
 }): Promise<Detector[]> {
   const out: Detector[] = [new RegexDetector()];
-  if (opts.useNer) {
+  if (opts.selectedModel === 'bert-ner') {
     if (!nerSingleton) {
       nerSingleton = new NerDetector({ loader: loadTransformersNer });
     }
@@ -21,7 +26,20 @@ export async function getDetectors(opts: {
       if (p.status === 'downloading' && opts.onLoadProgress) opts.onLoadProgress(p.progress);
     });
     out.push(nerSingleton);
+  } else if (WEBLLM_KEYS.includes(opts.selectedModel)) {
+    let detector = webllmSingletons[opts.selectedModel];
+    if (!detector) {
+      detector = new WebLlmDetector({
+        modelKey: opts.selectedModel as 'phi-3.5-mini' | 'gemma-2-2b' | 'qwen-2.5-7b',
+      });
+      webllmSingletons[opts.selectedModel] = detector;
+    }
+    await detector.ensureLoaded((p) => {
+      if (opts.onLoadProgress) opts.onLoadProgress(p.progress);
+    });
+    out.push(detector);
   }
+  // 'regex-only' or unknown: return regex only
   return out;
 }
 
@@ -38,9 +56,6 @@ function pageToBboxLookup(page: RenderedPage) {
     entries.push({ item: it, start: cursor, end: cursor + it.str.length });
     cursor += it.str.length + 1;
   }
-  // PDF.js viewport.height is in pixel space at the configured scale (1.5).
-  // textItem.transform is also in viewport space (not raw PDF user space) and origin top-left.
-  // We assume transform[4] = x, transform[5] = y (top), width/height direct.
   return (start: number, end: number) => {
     const overlapping = entries.filter((e) => e.start < end && start < e.end);
     if (overlapping.length === 0) return null;
@@ -51,7 +66,6 @@ function pageToBboxLookup(page: RenderedPage) {
     for (const o of overlapping) {
       const t = o.item.transform;
       const x = t[4];
-      // PDF.js transform y is bottom of text in viewport coords (PDF.js inverts the page-coord y)
       const yBaseline = t[5];
       const w = o.item.width;
       const h = o.item.height || 12;
@@ -81,7 +95,6 @@ export async function detectDocument(
       spansWithBoxes.push({ ...s, bbox: { ...bb, pageNum: page.pageNum } });
     }
     onPageDone(page.pageNum, spansWithBoxes);
-    // Yield to the event loop so React can render between pages
     await new Promise((r) => setTimeout(r, 0));
   }
 }

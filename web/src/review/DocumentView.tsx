@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function DocumentView({ doc }: Props) {
-  const llmEnabled = useSettings((s) => s.llmEnabled);
+  const selectedModel = useSettings((s) => s.selectedModel);
   const setStatus = useDocuments((s) => s.setStatus);
   const setPage = useDocuments((s) => s.setPage);
   const updateSpan = useDocuments((s) => s.updateSpan);
@@ -52,7 +52,7 @@ export function DocumentView({ doc }: Props) {
       setStatus(doc.id, 'detecting');
       setDetecting(true);
       const detectors = await getDetectors({
-        useNer: llmEnabled,
+        selectedModel,
         onLoadProgress: (p) => setLoadProgress(p),
       });
 

@@ -1,18 +1,16 @@
 'use client';
 import type { ModelId } from '@/src/store/settings-store';
 import { loadTransformersNer } from '@/src/detection/ner/transformers-loader';
+import { loadWebLlmEngine, type WebLlmModelKey } from '@/src/llm/webllm-client';
 
 export interface InstallProgress {
-  status: 'downloading' | 'unpacking' | 'ready' | 'error';
-  progress: number; // 0–1
+  status: 'downloading' | 'unpacking' | 'initializing' | 'ready' | 'error';
+  progress: number;
   message?: string;
 }
 
-/**
- * Download a model so it's cached locally for fast startup later.
- * Currently only `bert-ner` has a real loader; WebLLM models (phi/gemma/qwen)
- * are recognized but report "not yet implemented" rather than silently failing.
- */
+const WEBLLM_MODELS: ModelId[] = ['phi-3.5-mini', 'gemma-2-2b', 'qwen-2.5-7b'];
+
 export async function installModel(
   id: ModelId,
   onProgress: (p: InstallProgress) => void,
@@ -24,24 +22,25 @@ export async function installModel(
   if (id === 'bert-ner') {
     await loadTransformersNer((p) => {
       if (p.status === 'downloading') {
-        onProgress({
-          status: 'downloading',
-          progress: p.progress,
-          message: p.message,
-        });
+        onProgress({ status: 'downloading', progress: p.progress, message: p.message });
       } else if (p.status === 'initializing') {
-        onProgress({ status: 'unpacking', progress: p.progress, message: p.message });
+        onProgress({ status: 'initializing', progress: p.progress, message: p.message });
       } else if (p.status === 'ready') {
         onProgress({ status: 'ready', progress: 1.0 });
       }
     });
     return;
   }
-  // Phi/Gemma/Qwen: WebLLM integration deferred to Plan 4
-  onProgress({
-    status: 'error',
-    progress: 0,
-    message: `${id} requires WebLLM, which is coming in the next release. The Fast model will be used as a fallback for now.`,
-  });
-  throw new Error('WebLLM models not yet implemented');
+  if (WEBLLM_MODELS.includes(id)) {
+    await loadWebLlmEngine(id as WebLlmModelKey, (p) => {
+      onProgress({
+        status: p.status as InstallProgress['status'],
+        progress: p.progress,
+        message: p.message,
+      });
+    });
+    return;
+  }
+  onProgress({ status: 'error', progress: 0, message: `Unknown model: ${id}` });
+  throw new Error(`Unknown model: ${id}`);
 }
