@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import type { DocumentSession } from '@/src/store/document-store';
+import { useDocuments, type DocumentSession } from '@/src/store/document-store';
 
 interface Props {
   documents: DocumentSession[];
@@ -25,7 +26,19 @@ const statusLabel = (s: DocumentSession): string => {
 };
 
 export function DocumentQueue({ documents, activeId }: Props) {
+  const router = useRouter();
+  const removeDoc = useDocuments((s) => s.remove);
+
   if (documents.length <= 1) return null;
+
+  const handleRemove = (id: string) => {
+    const next = removeDoc(id);
+    if (id === activeId) {
+      if (next) router.push(`/review/${next}`);
+      else router.push('/upload');
+    }
+  };
+
   return (
     <aside className="w-56 shrink-0 border-r border-[color:var(--color-border)] bg-[color:var(--color-bg)] overflow-y-auto">
       <div className="px-4 py-4 border-b border-[color:var(--color-border)]">
@@ -41,10 +54,11 @@ export function DocumentQueue({ documents, activeId }: Props) {
               <motion.div
                 whileHover={{ backgroundColor: 'rgba(26, 26, 26, 0.03)' }}
                 transition={{ duration: 0.12 }}
+                className="group relative"
               >
                 <Link
                   href={`/review/${d.id}`}
-                  className={`block px-4 py-2.5 ${
+                  className={`block pl-4 pr-9 py-2.5 ${
                     isActive ? 'bg-[color:var(--color-surface-muted)]' : ''
                   }`}
                 >
@@ -55,6 +69,18 @@ export function DocumentQueue({ documents, activeId }: Props) {
                     {statusLabel(d)}
                   </p>
                 </Link>
+                <button
+                  type="button"
+                  title="Remove from queue"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRemove(d.id);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-[color:var(--color-ink-subtle)] opacity-0 group-hover:opacity-100 hover:bg-[color:var(--color-surface-muted)] hover:text-[color:var(--color-ink)] transition-opacity"
+                >
+                  <span className="text-[12px] leading-none">×</span>
+                </button>
               </motion.div>
             </li>
           );

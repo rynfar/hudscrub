@@ -29,6 +29,7 @@ interface DocumentStoreState {
 
 interface DocumentStoreActions {
   add: (doc: Omit<DocumentSession, 'id' | 'createdAt'>) => string;
+  remove: (id: string) => string | null; // returns id of next active doc, or null if queue empty
   setActive: (id: string | null) => void;
   setStatus: (id: string, status: DocStatus) => void;
   setProgress: (id: string, currentPage: number, totalPages: number) => void;
@@ -47,6 +48,21 @@ export const useDocuments = create<DocumentStoreState & DocumentStoreActions>((s
     const full: DocumentSession = { ...doc, id, createdAt: Date.now() };
     set((s) => ({ documents: { ...s.documents, [id]: full }, activeId: s.activeId ?? id }));
     return id;
+  },
+  remove: (id) => {
+    let nextActive: string | null = null;
+    set((s) => {
+      const { [id]: _removed, ...rest } = s.documents;
+      void _removed;
+      const remaining = Object.values(rest).sort((a, b) => a.createdAt - b.createdAt);
+      if (s.activeId === id) {
+        nextActive = remaining.length > 0 ? remaining[0].id : null;
+      } else {
+        nextActive = s.activeId;
+      }
+      return { documents: rest, activeId: nextActive };
+    });
+    return nextActive;
   },
   setActive: (id) => set({ activeId: id }),
   setStatus: (id, status) =>
