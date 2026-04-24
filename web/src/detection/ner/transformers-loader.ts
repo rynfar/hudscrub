@@ -4,6 +4,53 @@ import type { TokenEntity } from './alignment.js';
 
 const MODEL_ID = 'Xenova/bert-base-NER';
 
+interface RawNerToken {
+  word: string;
+  entity: string;
+  score: number;
+  index?: number;
+  start?: number;
+  end?: number;
+}
+
+/**
+ * Compute character offsets for tokens whose pipeline output didn't include them.
+ * Uses a forward-scanning cursor over the source text, accounting for BERT-style
+ * subword continuations (tokens prefixed with "##").
+ */
+function attachOffsets(text: string, tokens: RawNerToken[]): TokenEntity[] {
+  const result: TokenEntity[] = [];
+  let cursor = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    // Already has offsets — pass through.
+    if (t.start !== undefined && t.end !== undefined) {
+      result.push({
+        word: t.word,
+        entity: t.entity,
+        start: t.start,
+        end: t.end,
+        score: t.score,
+      });
+      cursor = Math.max(cursor, t.end);
+      continue;
+    }
+    const cleanWord = t.word.startsWith('##') ? t.word.slice(2) : t.word;
+    if (!cleanWord) continue;
+    const idx = text.indexOf(cleanWord, cursor);
+    if (idx < 0) continue;
+    result.push({
+      word: cleanWord,
+      entity: t.entity,
+      start: idx,
+      end: idx + cleanWord.length,
+      score: t.score,
+    });
+    cursor = idx + cleanWord.length;
+  }
+  return result;
+}
+
 export async function loadTransformersNer(
   onProgress?: ProgressCallback,
 ): Promise<NerPipelineFn> {
@@ -38,22 +85,7 @@ export async function loadTransformersNer(
 
   return async (text: string): Promise<TokenEntity[]> => {
     if (!text || text.trim().length === 0) return [];
-    const result = (await ner(text)) as Array<{
-      word: string;
-      entity: string;
-      start?: number;
-      end?: number;
-      score: number;
-      index?: number;
-    }>;
-    return result
-      .filter((r) => r.start !== undefined && r.end !== undefined)
-      .map((r) => ({
-        word: r.word,
-        entity: r.entity,
-        start: r.start as number,
-        end: r.end as number,
-        score: r.score,
-      }));
+    const result = (await ner(text)) as RawNerToken[];
+    return attachOffsets(text, result);
   };
 }
