@@ -1,5 +1,5 @@
-import { loadPdf } from '../pdf/load.js';
-import type { Mode, Span } from '../types.js';
+import { loadPdf } from '../pdf/load';
+import type { Mode, Span } from '../types';
 
 export interface RedactOptions {
   mode: Mode;

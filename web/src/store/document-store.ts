@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Span } from '../types.js';
+import type { Span } from '../types';
 
 export type DocStatus = 'uploading' | 'detecting' | 'ready' | 'reviewing' | 'exported';
 

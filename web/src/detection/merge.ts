@@ -1,4 +1,4 @@
-import type { Span } from '../types.js';
+import type { Span } from '../types';
 
 const PRECEDENCE: Record<string, number> = {
   manual: 100,

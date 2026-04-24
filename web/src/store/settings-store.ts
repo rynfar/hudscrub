@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Mode, SpanLabel } from '../types.js';
+import type { Mode, SpanLabel } from '../types';
 
 export type ModelId = 'bert-ner' | 'phi-4-mini' | 'gemma-3-4b' | 'qwen-2.5-7b' | 'regex-only';
 

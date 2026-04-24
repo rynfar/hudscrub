@@ -1,7 +1,8 @@
-import type { Detector, Span, SpanLabel, SpanSource } from '../../types.js';
-import { groupBioTokens, type TokenEntity } from './alignment.js';
-import type { ProgressCallback } from './progress.js';
-import { randomUUID } from 'node:crypto';
+import type { Detector, Span, SpanLabel, SpanSource } from '../../types';
+import { groupBioTokens, type TokenEntity } from './alignment';
+import type { ProgressCallback } from './progress';
+
+const randomUUID = (): string => crypto.randomUUID();
 
 export type NerPipelineFn = (text: string) => Promise<TokenEntity[]>;
 

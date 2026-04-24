@@ -1,6 +1,8 @@
-import type { Detector, Span, SpanLabel } from '../../types.js';
-import { findAll, DEFAULT_ENABLED } from '../regex.js';
-import { randomUUID } from 'node:crypto';
+import type { Detector, Span, SpanLabel } from '../../types';
+import { findAll, DEFAULT_ENABLED } from '../regex';
+
+// `crypto.randomUUID` is available in browsers and Node 19+ as a global.
+const randomUUID = (): string => crypto.randomUUID();
 
 export class RegexDetector implements Detector {
   readonly name = 'regex';

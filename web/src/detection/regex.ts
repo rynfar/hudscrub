@@ -1,4 +1,4 @@
-import type { SpanLabel } from '../types.js';
+import type { SpanLabel } from '../types';
 
 export const PATTERNS: Record<string, RegExp> = {
   SSN: /\b\d{3}-\d{2}-\d{4}\b/g,

@@ -1,6 +1,6 @@
-import type { Detector, Span } from '../types.js';
-import { mergeSpans, isForbiddenSpan } from './merge.js';
-import { findDollars } from './regex.js';
+import type { Detector, Span } from '../types';
+import { mergeSpans, isForbiddenSpan } from './merge';
+import { findDollars } from './regex';
 
 export async function detectPage(text: string, detectors: Detector[]): Promise<Span[]> {
   if (!text) return [];
@@ -15,12 +15,12 @@ export async function detectPage(text: string, detectors: Detector[]): Promise<S
   return spans;
 }
 
-export { mergeSpans, isForbiddenSpan } from './merge.js';
-export { RegexDetector } from './detectors/regex-detector.js';
+export { mergeSpans, isForbiddenSpan } from './merge';
+export { RegexDetector } from './detectors/regex-detector';
 export {
   findAll,
   findDollars,
   PATTERNS,
   DEFAULT_ENABLED,
   FORBIDDEN_FOR_MUTATION,
-} from './regex.js';
+} from './regex';

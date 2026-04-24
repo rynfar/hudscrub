@@ -1,5 +1,5 @@
-import type { SpanLabel } from '../../types.js';
-import { mapNerTag } from './label-map.js';
+import type { SpanLabel } from '../../types';
+import { mapNerTag } from './label-map';
 
 export interface TokenEntity {
   word: string;

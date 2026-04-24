@@ -1,4 +1,4 @@
-import type { SpanLabel } from '../../types.js';
+import type { SpanLabel } from '../../types';
 
 const MAPPING: Record<string, SpanLabel> = {
   PER: 'NAME',

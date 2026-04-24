@@ -1,6 +1,6 @@
-import type { NerPipelineFn } from './ner-detector.js';
-import type { ProgressCallback } from './progress.js';
-import type { TokenEntity } from './alignment.js';
+import type { NerPipelineFn } from './ner-detector';
+import type { ProgressCallback } from './progress';
+import type { TokenEntity } from './alignment';
 
 const MODEL_ID = 'Xenova/bert-base-NER';
 

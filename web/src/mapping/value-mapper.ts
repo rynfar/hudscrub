@@ -1,5 +1,5 @@
-import { stableSeed } from './stable-seed.js';
-import type { SpanLabel } from '../types.js';
+import { stableSeed } from './stable-seed';
+import type { SpanLabel } from '../types';
 
 class SeededRng {
   private state: number;

@@ -1,4 +1,4 @@
-import { findDollars } from '../detection/regex.js';
+import { findDollars } from '../detection/regex';
 
 export interface PageDiff {
   pageNum: number;

@@ -1,5 +1,5 @@
 import type * as mupdf from 'mupdf';
-import type { BBox } from '../types.js';
+import type { BBox } from '../types';
 
 interface LineEntry {
   text: string;
