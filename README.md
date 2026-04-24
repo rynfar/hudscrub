@@ -4,9 +4,20 @@ Batch PII redaction and sandbox-substitution for HUD documents, with **byte-exac
 
 ## Status
 
-Migrating from Python CLI to TypeScript web app. The TypeScript engine lives in [`web/`](web/) and replicates the Python CLI's functionality with the same dollar-preservation guarantee. The Python CLI in `hudscrub/` remains as the reference implementation and will be archived under `legacy/python/` after the web app ships (Plan 4).
+The TypeScript web app is the active implementation — see [`web/`](web/). The Python CLI below remains as a reference; it still works.
 
-See [`docs/superpowers/specs/2026-04-24-hudscrub-web-design.md`](docs/superpowers/specs/2026-04-24-hudscrub-web-design.md) for the full design and `docs/superpowers/plans/` for implementation plans.
+Run the web app locally:
+
+```bash
+cd web
+npm install --legacy-peer-deps
+npm run gen-fixtures
+npm run dev    # http://localhost:3000
+```
+
+Deploy to Vercel: see [`web/README.md`](web/README.md#deploy-to-vercel).
+
+See [`docs/superpowers/specs/2026-04-24-hudscrub-web-design.md`](docs/superpowers/specs/2026-04-24-hudscrub-web-design.md) for the full design and [`docs/superpowers/plans/`](docs/superpowers/plans/) for implementation plans (foundation → LLM detection → review UI → ship).
 
 
 
