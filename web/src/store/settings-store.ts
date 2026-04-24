@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Mode, SpanLabel } from '../types';
 
 export type ModelId =
-  | 'bert-ner'
   | 'phi-3.5-mini'
   | 'gemma-2-2b'
   | 'qwen-2.5-7b'
@@ -21,48 +20,39 @@ export interface ModelOption {
 
 export const MODELS: ModelOption[] = [
   {
-    id: 'bert-ner',
-    name: 'Fast — works on any device',
-    sizeLabel: '110 MB',
-    speedLabel: 'Instant',
-    qualityLabel: 'Good',
-    description: 'Good for older machines or quick trials.',
-    requiresWebGPU: false,
+    id: 'qwen-2.5-7b',
+    name: 'Qwen 2.5 7B — best quality',
+    sizeLabel: '4.5 GB',
+    speedLabel: '~12s / page',
+    qualityLabel: 'Highest',
+    description: 'Largest model. Highest recall on names, addresses, and edge cases. Recommended for important documents. Needs an M-series Mac or RTX 3060+ to run smoothly.',
+    requiresWebGPU: true,
   },
   {
     id: 'phi-3.5-mini',
-    name: 'Balanced — recommended (Phi-3.5-mini)',
+    name: 'Phi-3.5 mini — recommended balance',
     sizeLabel: '2.2 GB',
-    speedLabel: '~5s/page',
+    speedLabel: '~5s / page',
     qualityLabel: 'High',
-    description: 'Microsoft Phi-3.5-mini, 4-bit quantized. Strong instruction following.',
+    description: 'Microsoft Phi-3.5-mini (3.8B). Strong at structured extraction, half the download of Qwen, runs comfortably on most modern laptops.',
     requiresWebGPU: true,
   },
   {
     id: 'gemma-2-2b',
-    name: 'Compact (Gemma 2 2B)',
+    name: 'Gemma 2 2B — fastest LLM',
     sizeLabel: '1.5 GB',
-    speedLabel: '~3s/page',
-    qualityLabel: 'High',
-    description: "Google's on-device model. Smaller download than Phi.",
-    requiresWebGPU: true,
-  },
-  {
-    id: 'qwen-2.5-7b',
-    name: 'Highest quality (slow)',
-    sizeLabel: '4.5 GB',
-    speedLabel: '~12s/page',
-    qualityLabel: 'Highest',
-    description: 'Qwen 2.5 7B. M-series Mac or RTX 3060+ recommended.',
+    speedLabel: '~3s / page',
+    qualityLabel: 'Good',
+    description: "Google's smallest on-device model. Quickest per page and smallest download, but expect to manually add a few more names and addresses the model misses.",
     requiresWebGPU: true,
   },
   {
     id: 'regex-only',
-    name: 'Regex only (no AI)',
+    name: 'No AI — pattern matching only',
     sizeLabel: '0 MB',
     speedLabel: 'Instant',
     qualityLabel: 'Limited',
-    description: 'Names and addresses must be added manually.',
+    description: 'Catches structured PII (SSN, EIN, phone, email, dates, loan numbers). You add names and addresses manually by selecting them in the document.',
     requiresWebGPU: false,
   },
 ];
@@ -84,7 +74,7 @@ const DEFAULTS: Settings = {
   mode: 'redact',
   enabledRegexPatterns: ['SSN', 'EIN', 'PHONE', 'EMAIL', 'DATE', 'LOAN_NUM'],
   llmEnabled: true,
-  selectedModel: 'bert-ner',
+  selectedModel: 'phi-3.5-mini',
   detectionPasses: 2,
   autoAcceptRegex: true,
   hasCompletedOnboarding: false,
@@ -126,15 +116,24 @@ export const useSettings = create<Settings & SettingsActions>()(
         };
       }),
       partialize: ({ set: _set, reset: _reset, markInstalled: _mi, ...state }) => state,
-      version: 1,
-      // Old persisted data (pre-v1, with old model IDs like 'phi-4-mini') is incompatible.
-      // Drop it and rebuild from defaults — the user just re-picks their model in Settings.
+      version: 2,
+      // v1 → v2: 'bert-ner' was removed as a model option; remap any persisted
+      // selection or installed entry to the new default. v0 → anything: drop entirely.
       migrate: (persisted: unknown, fromVersion: number) => {
         if (fromVersion < 1) {
-          // Discard old shape entirely
           return { ...DEFAULTS };
         }
-        return persisted as Settings;
+        const s = persisted as Partial<Settings> & { selectedModel?: string; installedModels?: string[] };
+        const remap = (id: string | undefined): ModelId =>
+          id === 'bert-ner' ? 'phi-3.5-mini' : ((id as ModelId) ?? DEFAULTS.selectedModel);
+        return {
+          ...DEFAULTS,
+          ...s,
+          selectedModel: remap(s.selectedModel),
+          installedModels: ((s.installedModels ?? []) as string[])
+            .filter((id) => id !== 'bert-ner')
+            .map((id) => id as ModelId),
+        } as Settings;
       },
     },
   ),

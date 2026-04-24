@@ -13,7 +13,7 @@ describe('settings store', () => {
   it('has sensible defaults', () => {
     const s = useSettings.getState();
     expect(s.mode).toBe('redact');
-    expect(s.selectedModel).toBe('bert-ner');
+    expect(s.selectedModel).toBe('phi-3.5-mini');
     expect(s.hasCompletedOnboarding).toBe(false);
   });
   it('partial updates work', () => {

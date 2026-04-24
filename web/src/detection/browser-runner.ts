@@ -1,14 +1,11 @@
 'use client';
 import { detectPage } from '@/src/detection/index';
 import { RegexDetector } from '@/src/detection/detectors/regex-detector';
-import { NerDetector } from '@/src/detection/ner/ner-detector';
-import { loadTransformersNer } from '@/src/detection/ner/transformers-loader';
 import { WebLlmDetector } from '@/src/llm/webllm-detector';
 import type { Span, Detector } from '@/src/types';
 import type { RenderedPage } from '@/src/pdf/browser-renderer';
 import type { ModelId } from '@/src/store/settings-store';
 
-let nerSingleton: NerDetector | null = null;
 const webllmSingletons: Partial<Record<ModelId, WebLlmDetector>> = {};
 
 const WEBLLM_KEYS: ReadonlyArray<ModelId> = ['phi-3.5-mini', 'gemma-2-2b', 'qwen-2.5-7b'];
@@ -18,15 +15,7 @@ export async function getDetectors(opts: {
   onLoadProgress?: (p: number) => void;
 }): Promise<Detector[]> {
   const out: Detector[] = [new RegexDetector()];
-  if (opts.selectedModel === 'bert-ner') {
-    if (!nerSingleton) {
-      nerSingleton = new NerDetector({ loader: loadTransformersNer });
-    }
-    await nerSingleton.ensureLoaded((p) => {
-      if (p.status === 'downloading' && opts.onLoadProgress) opts.onLoadProgress(p.progress);
-    });
-    out.push(nerSingleton);
-  } else if (WEBLLM_KEYS.includes(opts.selectedModel)) {
+  if (WEBLLM_KEYS.includes(opts.selectedModel)) {
     let detector = webllmSingletons[opts.selectedModel];
     if (!detector) {
       detector = new WebLlmDetector({
