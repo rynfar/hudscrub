@@ -47,14 +47,25 @@ export function ModelPicker({ selected, onSelect, webGpuAvailable, allowInstall 
         const isInstallingThis = installing === m.id;
 
         return (
-          <motion.button
-            type="button"
+          <motion.div
+            role="radio"
+            tabIndex={disabled ? -1 : 0}
+            aria-checked={isSelected}
+            aria-disabled={disabled}
             key={m.id}
-            disabled={disabled}
-            onClick={() => onSelect(m.id)}
+            onClick={() => !disabled && onSelect(m.id)}
+            onKeyDown={(e) => {
+              if (disabled) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(m.id);
+              }
+            }}
             whileHover={!disabled ? { scale: 1.005 } : {}}
             transition={{ type: 'spring', stiffness: 600, damping: 36 }}
             className={`w-full text-left p-4 rounded-lg border transition-colors ${
+              !disabled ? 'cursor-pointer' : ''
+            } ${
               isSelected
                 ? 'border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)]'
                 : 'border-[color:var(--color-border)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-border-strong)]'
@@ -130,7 +141,7 @@ export function ModelPicker({ selected, onSelect, webGpuAvailable, allowInstall 
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.button>
+          </motion.div>
         );
       })}
     </div>
