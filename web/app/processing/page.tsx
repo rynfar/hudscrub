@@ -9,11 +9,13 @@ import {
   startProcessing,
   useProcessingStatus,
   cancelProcessing,
+  resetProcessing,
 } from '@/src/processing/runner';
 
 export default function ProcessingPage() {
   const router = useRouter();
   const documentsMap = useDocuments((s) => s.documents);
+  const removeDoc = useDocuments((s) => s.remove);
   const selectedModel = useSettings((s) => s.selectedModel);
   const meta = MODELS.find((m) => m.id === selectedModel);
   const status = useProcessingStatus();
@@ -144,6 +146,15 @@ export default function ProcessingPage() {
                   type="button"
                   onClick={() => {
                     cancelProcessing();
+                    // Drop any docs that were in the queue but never completed.
+                    // Otherwise they'd reappear on the next upload as "uploading"
+                    // and processing would re-pick them up.
+                    for (const d of Object.values(documentsMap)) {
+                      if (d.status === 'uploading' || d.status === 'detecting') {
+                        removeDoc(d.id);
+                      }
+                    }
+                    resetProcessing();
                     router.replace('/upload');
                   }}
                   className="text-xs text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)] hover:underline"
