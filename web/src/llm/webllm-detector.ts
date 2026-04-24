@@ -26,6 +26,48 @@ const PASSES: PassConfig[] = [
 
 const randomUUID = (): string => crypto.randomUUID();
 
+/**
+ * Find an entity's substring in source text with tolerance for whitespace differences.
+ * PDF.js joins text items with spaces that may not match the model's output exactly.
+ * Strategy: try exact match first, then collapse all whitespace runs to single spaces
+ * on both sides and search again, then return the original-text slice at that position.
+ */
+function locateInText(
+  source: string,
+  needle: string,
+): { start: number; end: number; matchedText: string } | null {
+  const trimmed = needle.trim();
+  if (trimmed.length < 2) return null;
+
+  // Exact match — fastest path
+  const exact = source.indexOf(trimmed);
+  if (exact >= 0) {
+    return { start: exact, end: exact + trimmed.length, matchedText: trimmed };
+  }
+
+  // Whitespace-tolerant match: normalize both sides and find position in the
+  // original text by walking and counting non-whitespace characters.
+  const needleCompact = trimmed.replace(/\s+/g, '');
+  if (needleCompact.length < 2) return null;
+
+  // Build a map: index in compact form → index in original
+  const positions: number[] = [];
+  let compact = '';
+  for (let i = 0; i < source.length; i++) {
+    if (!/\s/.test(source[i])) {
+      positions.push(i);
+      compact += source[i];
+    }
+  }
+  const compactIdx = compact.indexOf(needleCompact);
+  if (compactIdx < 0) return null;
+  const start = positions[compactIdx];
+  const endChar = positions[compactIdx + needleCompact.length - 1];
+  if (endChar === undefined) return null;
+  const end = endChar + 1;
+  return { start, end, matchedText: source.slice(start, end) };
+}
+
 export interface WebLlmDetectorOptions {
   modelKey: WebLlmModelKey;
 }
@@ -59,18 +101,15 @@ export class WebLlmDetector implements Detector {
         continue;
       }
       for (const e of entities) {
-        // Find character offsets via best-effort indexOf (model emits text only)
-        const start = text.indexOf(e.text);
-        if (start < 0) continue;
-        // Filter hallucinated overlaps with already-found spans
-        const end = start + e.text.length;
+        const located = locateInText(text, e.text);
+        if (!located) continue;
         out.push({
           id: randomUUID(),
           source: pass.source,
           label: pass.label,
-          text: e.text,
-          start,
-          end,
+          text: located.matchedText,
+          start: located.start,
+          end: located.end,
           bbox: { x: 0, y: 0, width: 0, height: 0, pageNum: -1 },
           confidence: 0.85,
           decision: 'accepted',
