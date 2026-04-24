@@ -150,6 +150,7 @@ export function DocumentView({ doc }: Props) {
                 page={renderedPage}
                 spans={spans}
                 focusedSpanId={focusedSpanId}
+                detecting={detecting && pageState?.status !== 'ready'}
                 onSpanClick={setFocusedSpanId}
               />
             </div>
