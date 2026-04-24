@@ -35,16 +35,31 @@ export function selectionToSpan(pageNum: number, pageText: string): Span | null 
   const pdfW = cssW / SCALE;
   const pdfH = cssH / SCALE;
 
-  const start = pageText.indexOf(text);
-  const end = start >= 0 ? start + text.length : 0;
+  let start = pageText.indexOf(text);
+  let end = start >= 0 ? start + text.length : 0;
+
+  // PDF.js text-layer spans are per-text-item; selection often clips mid-word.
+  // If the captured selection ends inside a word, push the boundary outward
+  // to the next non-word character so the user sees the full thing.
+  if (start >= 0 && end > 0) {
+    const isWord = (c: string | undefined) => !!c && /[A-Za-z0-9]/.test(c);
+    while (start > 0 && isWord(pageText[start - 1]) && isWord(pageText[start])) {
+      start--;
+    }
+    while (end < pageText.length && isWord(pageText[end - 1]) && isWord(pageText[end])) {
+      end++;
+    }
+  }
+
+  const finalText = start >= 0 ? pageText.slice(start, end) : text;
 
   return {
     id: crypto.randomUUID(),
     source: 'manual',
     label: 'CUSTOM',
-    text,
+    text: finalText,
     start: start >= 0 ? start : 0,
-    end,
+    end: start >= 0 ? end : 0,
     bbox: { x: pdfX, y: pdfY, width: pdfW, height: pdfH, pageNum },
     confidence: 1.0,
     decision: 'accepted',
