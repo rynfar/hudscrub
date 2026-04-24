@@ -10,8 +10,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'scripts/**/*.ts'",
     "gen-fixtures": "tsx scripts/gen-fixtures.ts",
     "redact": "tsx scripts/redact-cli.ts"
@@ -22,6 +22,7 @@
     "pdfkit": "^0.15.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
     "@types/pdfkit": "^0.13.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
