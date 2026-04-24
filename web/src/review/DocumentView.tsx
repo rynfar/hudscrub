@@ -11,6 +11,7 @@ import { ExportButton } from './ExportButton';
 import { ManualSelect } from './ManualSelect';
 import { DocumentQueue } from './DocumentQueue';
 import { Kbd } from '@/src/ui/Kbd';
+import { MODELS } from '@/src/store/settings-store';
 
 interface Props {
   doc: DocumentSession;
@@ -99,6 +100,9 @@ export function DocumentView({ doc }: Props) {
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-[color:var(--color-ink-muted)]">
             {doc.filename}
+          </span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-ink-subtle)] font-mono">
+            · {MODELS.find((m) => m.id === selectedModel)?.name.split('—')[0].trim() ?? selectedModel}
           </span>
           {detecting && (
             <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-accent)] font-mono">

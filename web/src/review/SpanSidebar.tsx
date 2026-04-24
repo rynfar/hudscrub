@@ -50,6 +50,18 @@ export function SpanSidebar({
   }
   const orderedLabels = labelOrder.filter((l) => byLabel.has(l));
 
+  // Source breakdown: how many spans came from each detector
+  const sourceCounts = {
+    regex: 0,
+    llm: 0,
+    manual: 0,
+  };
+  for (const s of spans) {
+    if (s.source === 'regex') sourceCounts.regex++;
+    else if (s.source === 'manual') sourceCounts.manual++;
+    else sourceCounts.llm++;
+  }
+
   return (
     <aside className="w-80 shrink-0 border-l border-[color:var(--color-border)] overflow-y-auto bg-[color:var(--color-bg)]">
       <div className="px-5 py-4 border-b border-[color:var(--color-border)]">
@@ -66,6 +78,25 @@ export function SpanSidebar({
         <p className="text-sm text-[color:var(--color-ink)] mt-0.5">
           {spans.length === 0 ? 'No spans on this page' : `${spans.length} on this page`}
         </p>
+        {spans.length > 0 && (
+          <div className="flex gap-1.5 mt-2">
+            {sourceCounts.regex > 0 && (
+              <span className="text-[10px] font-mono text-[#0F5F3D]" title="From regex pattern matching">
+                {sourceCounts.regex} regex
+              </span>
+            )}
+            {sourceCounts.llm > 0 && (
+              <span className="text-[10px] font-mono text-[#8B5A14]" title="From the AI model">
+                {sourceCounts.llm} ai
+              </span>
+            )}
+            {sourceCounts.manual > 0 && (
+              <span className="text-[10px] font-mono text-[#5B4192]" title="Added manually by you">
+                {sourceCounts.manual} manual
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="divide-y divide-[color:var(--color-border)]">
         {orderedLabels.map((label) => (
