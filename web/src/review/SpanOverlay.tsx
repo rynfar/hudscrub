@@ -14,9 +14,9 @@ interface Props {
 
 const styleByState = (s: Span): { className: string } => {
   if (s.decision === 'accepted') {
-    // Solid dark green so the redaction visually reads as "this is being removed"
+    // Medium-opacity dark green: text underneath is still legible while clearly marked.
     return {
-      className: 'bg-[rgba(10,74,48,0.85)] border-[1.5px] border-[#063524]',
+      className: 'bg-[rgba(15,95,61,0.5)] border-[1.5px] border-[#0F5F3D]',
     };
   }
   if (s.decision === 'rejected') {
