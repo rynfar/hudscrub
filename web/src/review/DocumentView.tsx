@@ -9,6 +9,7 @@ import { SpanSidebar } from './SpanSidebar';
 import { KeyboardLayer } from './KeyboardLayer';
 import { ExportButton } from './ExportButton';
 import { ManualSelect } from './ManualSelect';
+import { DocumentQueue } from './DocumentQueue';
 import { Kbd } from '@/src/ui/Kbd';
 
 interface Props {
@@ -107,6 +108,7 @@ export function DocumentView({ doc }: Props) {
       </div>
 
       <div className="flex flex-1 overflow-hidden bg-[color:var(--color-surface-muted)]">
+        <DocumentQueue documents={Object.values(useDocuments.getState().documents)} activeId={doc.id} />
         <div className="flex-1 overflow-auto py-8 px-6">
           {pages.length === 0 && (
             <p className="text-center text-sm text-[color:var(--color-ink-muted)]">
