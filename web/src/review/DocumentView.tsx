@@ -67,6 +67,8 @@ export function DocumentView({ doc }: Props) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
+      {/* ProcessingBanner kept in tree but no-op when not running — left in case
+          we re-enable parallel review-while-processing later. */}
       <ProcessingBanner />
       {/* Document toolbar */}
       <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-6 py-2 flex items-center justify-between">

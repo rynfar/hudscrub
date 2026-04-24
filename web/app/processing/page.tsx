@@ -37,16 +37,20 @@ export default function ProcessingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // As soon as the first doc completes, auto-route to its review.
-  // Subsequent docs continue processing in the background; the review
-  // screen shows the ProcessingBanner.
+  // Wait for ALL docs to finish processing, then route to the first one.
+  // The user explicitly preferred a fully-blocked processing screen over
+  // a "review one while others process" flow.
   useEffect(() => {
     if (autoOpened) return;
-    if (status.completedDocIds.length > 0) {
+    if (
+      !status.isRunning &&
+      status.progress?.phase === 'done' &&
+      status.completedDocIds.length > 0
+    ) {
       setAutoOpened(true);
       router.replace(`/review/${status.completedDocIds[0]}`);
     }
-  }, [status.completedDocIds, autoOpened, router]);
+  }, [status.isRunning, status.progress, status.completedDocIds, autoOpened, router]);
 
   const phaseLabel: Record<string, string> = {
     'loading-pdf': 'Reading PDF',
@@ -130,8 +134,8 @@ export default function ProcessingPage() {
 
               {status.progress.docCount > 1 && (
                 <p className="text-xs text-[color:var(--color-ink-subtle)] text-center pt-2">
-                  You&apos;ll be taken to the first document as soon as it finishes — the
-                  rest will keep processing in the background.
+                  You&apos;ll be taken to review when all {status.progress.docCount} documents
+                  are ready.
                 </p>
               )}
 
