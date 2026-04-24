@@ -1,15 +1,15 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { loadPdf } from '../src/pdf/load.js';
-import { extractPage } from '../src/pdf/extract.js';
-import { detectPage } from '../src/detection/index.js';
-import { RegexDetector } from '../src/detection/detectors/regex-detector.js';
-import { NerDetector } from '../src/detection/ner/ner-detector.js';
-import { loadTransformersNer } from '../src/detection/ner/transformers-loader.js';
-import { redactDocument } from '../src/output/redactor.js';
-import { verifyDollarPreservation } from '../src/output/dollar-verifier.js';
-import { ValueMapper } from '../src/mapping/value-mapper.js';
-import type { Detector, Mode, Span } from '../src/types.js';
+import { loadPdf } from '../src/pdf/load';
+import { extractPage } from '../src/pdf/extract';
+import { detectPage } from '../src/detection/index';
+import { RegexDetector } from '../src/detection/detectors/regex-detector';
+import { NerDetector } from '../src/detection/ner/ner-detector';
+import { loadTransformersNer } from '../src/detection/ner/transformers-loader';
+import { redactDocument } from '../src/output/redactor';
+import { verifyDollarPreservation } from '../src/output/dollar-verifier';
+import { ValueMapper } from '../src/mapping/value-mapper';
+import type { Detector, Mode, Span } from '../src/types';
 
 interface Args {
   mode: Mode;

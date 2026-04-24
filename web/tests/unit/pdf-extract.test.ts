@@ -3,7 +3,8 @@ import { loadPdf } from '../../src/pdf/load.js';
 import { extractPage } from '../../src/pdf/extract.js';
 import * as fs from 'node:fs';
 
-const FIXTURE = '/Users/rynfar/Downloads/hudscrub-project/examples/hud1_garcia_tran.pdf';
+import * as path from 'node:path';
+const FIXTURE = path.resolve('tests/fixtures/hud1_garcia.pdf');
 
 describe('extractPage', () => {
   it('returns text and per-character bbox lookup', async () => {

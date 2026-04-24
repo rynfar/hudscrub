@@ -1,11 +1,20 @@
-__pycache__/
-*.pyc
-.pytest_cache/
-.venv/
-venv/
-*.egg-info/
-.DS_Store
 node_modules/
-web/dist/
-web/coverage/
-web/.next/
+.next/
+dist/
+coverage/
+.DS_Store
+*.log
+.vercel
+.env*.local
+
+# Tooling
+.claude/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# IDE
+.vscode/
+.idea/
