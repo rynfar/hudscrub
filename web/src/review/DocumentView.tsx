@@ -158,8 +158,8 @@ export function DocumentView({ doc }: Props) {
         <span className="flex items-center gap-1.5">
           <Kbd>N</Kbd>/<Kbd>P</Kbd> page nav
         </span>
-        <span className="flex items-center gap-1.5">
-          <Kbd>R</Kbd> add manual (after selecting text)
+        <span className="flex items-center gap-1.5 text-[color:var(--color-ink-subtle)]">
+          select text in the PDF and click <span className="font-medium text-[color:var(--color-ink-muted)]">Redact this</span>
         </span>
       </div>
 
