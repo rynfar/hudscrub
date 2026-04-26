@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDocuments, type DocumentSession } from '@/src/store/document-store';
+import { useSessions } from '@/src/store/session-store';
 import { useSettings, MODELS } from '@/src/store/settings-store';
 import { loadPdfInBrowser, type RenderedPage } from '@/src/pdf/browser-renderer';
 import { PdfPage } from './PdfPage';
@@ -12,6 +14,7 @@ import { ManualSelect } from './ManualSelect';
 import { SelectionToolbar } from './SelectionToolbar';
 import { selectionToSpan } from './selection-to-span';
 import { DocumentQueue } from './DocumentQueue';
+import { ApprovedSummary } from './ApprovedSummary';
 import { Kbd } from '@/src/ui/Kbd';
 import { useProcessingStatus } from '@/src/processing/runner';
 import { ProcessingBanner } from './ProcessingBanner';
@@ -21,12 +24,23 @@ interface Props {
 }
 
 export function DocumentView({ doc }: Props) {
+  const router = useRouter();
   const selectedModel = useSettings((s) => s.selectedModel);
   const updateSpan = useDocuments((s) => s.updateSpan);
   const addSpan = useDocuments((s) => s.addSpan);
   const removeSpanAction = useDocuments((s) => s.removeSpan);
+  const approveDoc = useDocuments((s) => s.approveDoc);
+  const unapproveDoc = useDocuments((s) => s.unapproveDoc);
+  const allDocsMap = useDocuments((s) => s.documents);
+  const sessions = useSessions((s) => s.sessions);
   const processingStatus = useProcessingStatus();
   void selectedModel;
+  const session = sessions.find((s) => s.id === doc.sessionId);
+  const isArchived = session?.status === 'exported';
+  // Approved spans are locked from edits. So are docs in archived (exported)
+  // sessions — those are read-only history.
+  const isApproved = doc.approvedAt !== null;
+  const isLocked = isApproved || isArchived;
 
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -84,6 +98,19 @@ export function DocumentView({ doc }: Props) {
   const isProcessingThisDoc =
     processingStatus.isRunning && processingStatus.progress?.docFilename === doc.filename;
 
+  const sessionDocs = Object.values(allDocsMap)
+    .filter((d) => d.sessionId === doc.sessionId)
+    .sort((a, b) => a.createdAt - b.createdAt);
+
+  const handleApprove = () => {
+    approveDoc(doc.id);
+    // Auto-advance to the next un-approved doc in this session, if any.
+    const nextPending = sessionDocs.find(
+      (d) => d.id !== doc.id && d.approvedAt === null,
+    );
+    if (nextPending) router.push(`/review/${nextPending.id}`);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
       {/* ProcessingBanner kept in tree but no-op when not running — left in case
@@ -91,22 +118,67 @@ export function DocumentView({ doc }: Props) {
       <ProcessingBanner />
       {/* Document toolbar */}
       <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-6 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-[color:var(--color-ink-muted)]">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="font-mono text-xs text-[color:var(--color-ink-muted)] truncate">
             {doc.filename}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-ink-subtle)] font-mono">
-            · {MODELS.find((m) => m.id === selectedModel)?.name.split('—')[0].trim() ?? selectedModel}
-          </span>
+          {isArchived ? (
+            <span className="text-[10px] uppercase tracking-[0.18em] font-mono text-[color:var(--color-ink-muted)] bg-[color:var(--color-surface-muted)] px-2 py-0.5 rounded">
+              archived
+            </span>
+          ) : isApproved ? (
+            <span className="text-[10px] uppercase tracking-[0.18em] font-mono text-[#0F5F3D] bg-[rgba(15,95,61,0.1)] px-2 py-0.5 rounded">
+              ✓ approved
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-ink-subtle)] font-mono">
+              · {MODELS.find((m) => m.id === selectedModel)?.name.split('—')[0].trim() ?? selectedModel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {!isArchived && (
+            isApproved ? (
+              <button
+                type="button"
+                onClick={() => unapproveDoc(doc.id)}
+                className="text-xs px-3 py-1.5 rounded text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-muted)] transition-colors"
+              >
+                Re-open for editing
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleApprove}
+                className="text-xs px-3 py-1.5 rounded bg-[#0F5F3D] text-white hover:bg-[#0a4a30] transition-colors font-medium"
+              >
+                Approve document
+              </button>
+            )
+          )}
           <ExportAllButton />
-          <ExportButton doc={doc} />
+          <ExportButton doc={doc} archived={isArchived} />
         </div>
       </div>
 
+      {isArchived && (
+        <div className="px-6 py-2 bg-[color:var(--color-surface-muted)] border-b border-[color:var(--color-border)] text-xs text-[color:var(--color-ink-muted)]">
+          This session was exported on{' '}
+          {session?.exportedAt
+            ? new Date(session.exportedAt).toLocaleDateString()
+            : ''}
+          . Spans are read-only — re-export is available below.
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden bg-[color:var(--color-surface-muted)]">
-        <DocumentQueue documents={Object.values(useDocuments.getState().documents)} activeId={doc.id} />
+        <DocumentQueue documents={sessionDocs} activeId={doc.id} />
+        {isLocked ? (
+          <ApprovedSummary
+            doc={doc}
+            onReopen={isArchived ? null : () => unapproveDoc(doc.id)}
+          />
+        ) : (
         <div className="flex-1 overflow-auto py-8 px-6 relative" ref={pdfScopeRef}>
           {pages.length === 0 && (
             <p className="text-center text-sm text-[color:var(--color-ink-muted)]">
@@ -146,15 +218,18 @@ export function DocumentView({ doc }: Props) {
             </div>
           )}
         </div>
-        <SpanSidebar
-          spans={spans}
-          focusedSpanId={focusedSpanId}
-          detecting={isProcessingThisDoc}
-          onSelect={setFocusedSpanId}
-          onAccept={acceptSpan}
-          onReject={rejectSpan}
-          onResetDecision={resetDecision}
-        />
+        )}
+        {!isLocked && (
+          <SpanSidebar
+            spans={spans}
+            focusedSpanId={focusedSpanId}
+            detecting={isProcessingThisDoc}
+            onSelect={setFocusedSpanId}
+            onAccept={acceptSpan}
+            onReject={rejectSpan}
+            onResetDecision={resetDecision}
+          />
+        )}
       </div>
 
       {/* Keyboard hint footer */}
@@ -179,17 +254,19 @@ export function DocumentView({ doc }: Props) {
         </span>
       </div>
 
-      <KeyboardLayer
-        spans={spans}
-        focusedSpanId={focusedSpanId}
-        onSetFocus={setFocusedSpanId}
-        onAccept={acceptSpan}
-        onReject={rejectSpan}
-        onAcceptAll={acceptAll}
-        onNextPage={() => setCurrentPage((p) => Math.min(pages.length - 1, p + 1))}
-        onPrevPage={() => setCurrentPage((p) => Math.max(0, p - 1))}
-      />
-      {renderedPage && pageState && (
+      {!isLocked && (
+        <KeyboardLayer
+          spans={spans}
+          focusedSpanId={focusedSpanId}
+          onSetFocus={setFocusedSpanId}
+          onAccept={acceptSpan}
+          onReject={rejectSpan}
+          onAcceptAll={acceptAll}
+          onNextPage={() => setCurrentPage((p) => Math.min(pages.length - 1, p + 1))}
+          onPrevPage={() => setCurrentPage((p) => Math.max(0, p - 1))}
+        />
+      )}
+      {!isLocked && renderedPage && pageState && (
         <>
           <ManualSelect
             pageText={pageState.text}

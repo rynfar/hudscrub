@@ -12,12 +12,15 @@ interface Props {
   onClick?: () => void;
 }
 
-const styleByState = (s: Span): { className: string } => {
+const styleByState = (s: Span, sandboxPreview: boolean): { className: string } => {
   if (s.decision === 'accepted') {
-    // Medium-opacity dark green: text underneath is still legible while clearly marked.
-    return {
-      className: 'bg-[rgba(15,95,61,0.5)] border-[1.5px] border-[#0F5F3D]',
-    };
+    // In sandbox preview we want the box to fully cover the original text so
+    // the replacement reads as a clean swap. In redact mode we keep the
+    // 50%-opacity look so the original is still partially visible.
+    if (sandboxPreview) {
+      return { className: 'bg-[#0F5F3D] border-[1.5px] border-[#0A4A30]' };
+    }
+    return { className: 'bg-[rgba(15,95,61,0.5)] border-[1.5px] border-[#0F5F3D]' };
   }
   if (s.decision === 'rejected') {
     return {
@@ -61,7 +64,18 @@ export function SpanOverlay({
   const top = span.bbox.y * sy;
   const width = span.bbox.width * sx;
   const height = span.bbox.height * sy;
-  const { className } = styleByState(span);
+  // Sandbox preview: when we have a replacement and the span is accepted,
+  // render the replacement text inside the box so the user sees the swap
+  // in place instead of just a colored highlight.
+  const showReplacement =
+    span.decision === 'accepted' && typeof span.replacement === 'string' && span.replacement.length > 0;
+  const { className } = styleByState(span, showReplacement);
+
+  // Pick a font size that fits the box height. Boxes hug the line height,
+  // so ~70% of box height is the target. Cap at 14px — defensive against
+  // boxes that accidentally span multiple lines (would otherwise render
+  // gigantic text). Floor at 8px for legibility.
+  const fontSize = Math.min(14, Math.max(8, Math.round(height * 0.7)));
 
   return (
     <motion.button
@@ -76,9 +90,23 @@ export function SpanOverlay({
           : '0 0 0 0 rgba(0,0,0,0)',
       }}
       transition={{ type: 'spring', stiffness: 600, damping: 36 }}
-      className={`absolute rounded-[2px] ${className}`}
-      style={{ left, top, width, height }}
-      aria-label={`${span.label}: ${span.text}`}
-    />
+      className={`absolute rounded-[2px] flex items-center overflow-hidden ${className}`}
+      style={{ left, top, width, height, paddingLeft: 2, paddingRight: 2 }}
+      aria-label={
+        showReplacement
+          ? `${span.label}: ${span.text} → ${span.replacement}`
+          : `${span.label}: ${span.text}`
+      }
+      title={showReplacement ? `${span.text} → ${span.replacement}` : undefined}
+    >
+      {showReplacement && (
+        <span
+          className="text-white font-medium whitespace-nowrap leading-none"
+          style={{ fontSize, letterSpacing: '-0.01em' }}
+        >
+          {span.replacement}
+        </span>
+      )}
+    </motion.button>
   );
 }

@@ -12,8 +12,8 @@ beforeEach(() => {
 describe('settings store', () => {
   it('has sensible defaults', () => {
     const s = useSettings.getState();
-    expect(s.mode).toBe('redact');
-    expect(s.selectedModel).toBe('phi-3.5-mini');
+    expect(s.mode).toBe('sandbox');
+    expect(s.selectedModel).toBe('gemma-2-2b');
     expect(s.hasCompletedOnboarding).toBe(false);
   });
   it('partial updates work', () => {
@@ -26,6 +26,7 @@ describe('settings store', () => {
 describe('document store', () => {
   it('add returns an id and sets active', () => {
     const id = useDocuments.getState().add({
+      sessionId: 'sess-1',
       filename: 'x.pdf',
       fileBytes: new ArrayBuffer(0),
       pages: [],
@@ -37,6 +38,7 @@ describe('document store', () => {
   });
   it('updateSpan patches a single span', () => {
     const id = useDocuments.getState().add({
+      sessionId: 'sess-1',
       filename: 'x.pdf',
       fileBytes: new ArrayBuffer(0),
       pages: [

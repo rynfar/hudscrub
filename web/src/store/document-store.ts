@@ -14,11 +14,13 @@ export interface PageState {
 
 export interface DocumentSession {
   id: string;
+  sessionId: string;
   filename: string;
   fileBytes: ArrayBuffer;
   pages: PageState[];
   status: DocStatus;
   createdAt: number;
+  approvedAt: number | null;
   detectionProgress: { currentPage: number; totalPages: number };
 }
 
@@ -28,7 +30,9 @@ interface DocumentStoreState {
 }
 
 interface DocumentStoreActions {
-  add: (doc: Omit<DocumentSession, 'id' | 'createdAt'>) => string;
+  add: (doc: Omit<DocumentSession, 'id' | 'createdAt' | 'approvedAt'>) => string;
+  addWithId: (doc: DocumentSession) => void;
+  hydrateMany: (docs: DocumentSession[]) => void;
   remove: (id: string) => string | null; // returns id of next active doc, or null if queue empty
   setActive: (id: string | null) => void;
   setStatus: (id: string, status: DocStatus) => void;
@@ -37,6 +41,8 @@ interface DocumentStoreActions {
   updateSpan: (id: string, pageNum: number, spanId: string, patch: Partial<Span>) => void;
   addSpan: (id: string, pageNum: number, span: Span) => void;
   removeSpan: (id: string, pageNum: number, spanId: string) => void;
+  approveDoc: (id: string) => void;
+  unapproveDoc: (id: string) => void;
   clearAll: () => void;
 }
 
@@ -45,10 +51,28 @@ export const useDocuments = create<DocumentStoreState & DocumentStoreActions>((s
   activeId: null,
   add: (doc) => {
     const id = crypto.randomUUID();
-    const full: DocumentSession = { ...doc, id, createdAt: Date.now() };
+    const full: DocumentSession = {
+      ...doc,
+      id,
+      sessionId: doc.sessionId,
+      createdAt: Date.now(),
+      approvedAt: null,
+    };
     set((s) => ({ documents: { ...s.documents, [id]: full }, activeId: s.activeId ?? id }));
     return id;
   },
+  addWithId: (doc) =>
+    set((s) => ({
+      documents: { ...s.documents, [doc.id]: doc },
+      activeId: s.activeId ?? doc.id,
+    })),
+  hydrateMany: (docs) =>
+    set(() => {
+      const map: Record<string, DocumentSession> = {};
+      for (const d of docs) map[d.id] = d;
+      const sorted = [...docs].sort((a, b) => a.createdAt - b.createdAt);
+      return { documents: map, activeId: sorted[0]?.id ?? null };
+    }),
   remove: (id) => {
     let nextActive: string | null = null;
     set((s) => {
@@ -120,6 +144,18 @@ export const useDocuments = create<DocumentStoreState & DocumentStoreActions>((s
       const pages = [...d.pages];
       pages[pageNum] = { ...page, spans: page.spans.filter((sp) => sp.id !== spanId) };
       return { documents: { ...s.documents, [id]: { ...d, pages } } };
+    }),
+  approveDoc: (id) =>
+    set((s) => {
+      const d = s.documents[id];
+      if (!d) return s;
+      return { documents: { ...s.documents, [id]: { ...d, approvedAt: Date.now() } } };
+    }),
+  unapproveDoc: (id) =>
+    set((s) => {
+      const d = s.documents[id];
+      if (!d) return s;
+      return { documents: { ...s.documents, [id]: { ...d, approvedAt: null } } };
     }),
   clearAll: () => set({ documents: {}, activeId: null }),
 }));

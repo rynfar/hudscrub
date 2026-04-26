@@ -98,11 +98,32 @@ Output: {"entities":[]}`;
 export const ADDRESSES_SYSTEM = `You are a precise PII-extraction assistant scanning HUD-1 / closing-disclosure pages.
 ${HUD1_STRUCTURE}
 
-YOUR TASK: extract EVERY street address on the page (property, mailing, etc.).
+YOUR TASK: extract EVERY street address on the page. Be EXHAUSTIVE. A typical
+HUD-1 has 4-7 distinct addresses — if you only return 1 or 2, you are wrong.
 
-An "address" is a physical or mailing location for a person, property, or
-business. It typically contains a street number + street name and may also
-contain city, state, and ZIP. Multi-line addresses should be combined.
+ALWAYS LOOK FOR (and extract every one you find):
+  1. Borrower's home/mailing address (under "C." or "Borrower:")
+  2. Co-borrower's address (if different)
+  3. Seller's mailing address (under "D." or "Seller:")
+  4. Co-seller's address (if different)
+  5. Lender's office address (under "E." or "Lender:") — YES, business addresses count
+  6. Property location (under "F." or "Property:")
+  7. Settlement-agent / title-company office (under "G." or "Settlement Agent:")
+  8. "Place of Settlement" address
+  9. Recording office address (when present)
+  10. Any other mailing/office address that appears
+
+IMPORTANT: extract business and office addresses too — lender offices, title-
+company offices, attorney offices. Do NOT skip an address just because it
+belongs to a company instead of a person.
+
+NOTE ON LAYOUT: this page may have come from a TWO-COLUMN layout (Borrower on
+the left, Seller on the right; Lender on the left, Property on the right).
+The text extraction may interleave columns, so you might see something like:
+  "1428 Oak Hollow Lane          892 Maple Drive
+   Sandy, UT 84092               Provo, UT 84601"
+Treat each column as its own address. Extract BOTH "1428 Oak Hollow Lane,
+Sandy, UT 84092" AND "892 Maple Drive, Provo, UT 84601".
 
 Forms to extract:
   - Street address only:        "1428 Oak Hollow Lane"
@@ -122,7 +143,11 @@ DO NOT extract:
   - Lot numbers / parcel IDs that aren't addresses
 
 Return ONLY a JSON object: {"entities": [{"text": "<address as it appears>"}]}.
-For multi-line addresses, join with a single space. List each distinct address.
+For multi-line addresses, join with a single space. List each DISTINCT address
+once — duplicates are fine to skip (the post-processor will redact every
+occurrence). But every distinct address must appear in your output, even
+when one address is shared by multiple parties (e.g., borrower's home is the
+same as the property).
 If you find nothing, return {"entities": []}.
 
 EXAMPLES:
@@ -144,6 +169,12 @@ Output: {"entities":[{"text":"3344 CEDAR PARK BLVD APT 12, BOULDER, CO 80303"}]}
 
 Input: "Settlement Office: 100 Sample Lane, Suite 200, Logan, UT 84341"
 Output: {"entities":[{"text":"100 Sample Lane, Suite 200, Logan, UT 84341"}]}
+
+Input: "C. Borrower            D. Seller\\nMaria Garcia          John Smith\\n1428 Oak Hollow Lane  892 Maple Drive\\nSandy, UT 84092       Provo, UT 84601"
+Output: {"entities":[{"text":"1428 Oak Hollow Lane Sandy, UT 84092"},{"text":"892 Maple Drive Provo, UT 84601"}]}
+
+Input: "E. Lender: Mountain West Mortgage LLC, 1500 Foothill Blvd, Salt Lake City, UT 84103\\nF. Property: 1428 Oak Hollow Lane, Sandy, UT 84092\\nG. Settlement Agent: Cache Valley Title, 100 Sample Lane, Suite 200, Logan, UT 84341"
+Output: {"entities":[{"text":"1500 Foothill Blvd, Salt Lake City, UT 84103"},{"text":"1428 Oak Hollow Lane, Sandy, UT 84092"},{"text":"100 Sample Lane, Suite 200, Logan, UT 84341"}]}
 
 Input: "Loan amount $320,000.00 paid 07/15/2024"
 Output: {"entities":[]}

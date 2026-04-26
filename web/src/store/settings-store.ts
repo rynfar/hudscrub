@@ -71,10 +71,10 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = {
-  mode: 'redact',
+  mode: 'sandbox',
   enabledRegexPatterns: ['SSN', 'EIN', 'PHONE', 'EMAIL', 'DATE', 'LOAN_NUM'],
   llmEnabled: true,
-  selectedModel: 'phi-3.5-mini',
+  selectedModel: 'gemma-2-2b',
   detectionPasses: 2,
   autoAcceptRegex: true,
   hasCompletedOnboarding: false,

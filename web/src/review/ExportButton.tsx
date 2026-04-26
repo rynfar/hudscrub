@@ -3,15 +3,25 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/src/ui/Button';
 import { useSettings } from '@/src/store/settings-store';
-import { exportDocument, triggerDownload, triggerJsonDownload } from '@/src/export/exporter';
+import { useSessions } from '@/src/store/session-store';
+import { exportDocument, triggerDownload } from '@/src/export/exporter';
 import type { DocumentSession } from '@/src/store/document-store';
 
-export function ExportButton({ doc }: { doc: DocumentSession }) {
+export function ExportButton({
+  doc,
+  archived = false,
+}: {
+  doc: DocumentSession;
+  archived?: boolean;
+}) {
   const settings = useSettings();
+  const markExported = useSessions((s) => s.markExported);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const allDecided = doc.pages.every((p) => p.spans.every((s) => s.decision !== 'pending'));
+  // Archived sessions act as if approved for export purposes — the user is
+  // re-exporting an immutable history record.
+  const canExport = archived || doc.approvedAt !== null;
   const acceptedCount = doc.pages.reduce(
     (sum, p) => sum + p.spans.filter((s) => s.decision === 'accepted').length,
     0,
@@ -23,16 +33,27 @@ export function ExportButton({ doc }: { doc: DocumentSession }) {
       const result = await exportDocument(doc, settings.mode, settings.sandboxSeed);
       const baseName = doc.filename.replace(/\.pdf$/, '');
       const suffix = settings.mode === 'redact' ? '.redacted.pdf' : '.sandboxed.pdf';
-      triggerDownload(result.bytes, `${baseName}${suffix}`);
+      // If we have mappings (sandbox mode), bundle PDF + mappings.json into
+      // a single ZIP. Two simultaneous downloads trigger Chrome's "allow
+      // multiple downloads?" prompt, which silently blocks subsequent clicks.
       if (result.mappings) {
-        triggerJsonDownload(result.mappings, `${baseName}.mappings.json`);
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        zip.file(`${baseName}${suffix}`, result.bytes);
+        zip.file(`${baseName}.mappings.json`, JSON.stringify(result.mappings, null, 2));
+        const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+        triggerDownload(zipBytes, `${baseName}.zip`, 'application/zip');
+      } else {
+        triggerDownload(result.bytes, `${baseName}${suffix}`);
       }
       setToast(
         result.warning
           ? `Exported with warning: ${result.warning}`
-          : `Exported ${result.spanCount} redactions to your Downloads.`,
+          : `Exported ${result.spanCount} redaction${result.spanCount === 1 ? '' : 's'} to your Downloads.`,
       );
       setTimeout(() => setToast(null), 4000);
+      // Mark this session as exported so it shows up archived in history.
+      markExported(doc.sessionId).catch((e) => console.warn('[export] markExported failed:', e));
     } catch (e) {
       console.error(e);
       setToast(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -47,17 +68,23 @@ export function ExportButton({ doc }: { doc: DocumentSession }) {
       <Button
         variant="primary"
         size="sm"
-        disabled={exporting || !allDecided || acceptedCount === 0}
+        disabled={exporting || !canExport || acceptedCount === 0}
         onClick={handleExport}
         title={
-          !allDecided
-            ? 'Decide on every span before exporting'
+          !canExport
+            ? 'Approve this document before exporting'
             : acceptedCount === 0
               ? 'Accept at least one span to export'
-              : undefined
+              : `Download ${acceptedCount} redaction${acceptedCount === 1 ? '' : 's'} as PDF`
         }
       >
-        {exporting ? 'Exporting…' : !allDecided ? 'Review remaining first' : `Export (${acceptedCount})`}
+        {exporting
+          ? 'Exporting…'
+          : !canExport
+            ? 'Approve to export'
+            : archived
+              ? 'Re-download PDF'
+              : 'Download PDF'}
       </Button>
       <AnimatePresence>
         {toast && (

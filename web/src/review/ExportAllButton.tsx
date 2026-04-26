@@ -4,24 +4,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/src/ui/Button';
 import { useSettings } from '@/src/store/settings-store';
 import { useDocuments } from '@/src/store/document-store';
+import { useSessions } from '@/src/store/session-store';
 import { exportBatchAsZip, triggerDownload } from '@/src/export/exporter';
 
 export function ExportAllButton() {
   const settings = useSettings();
   const documents = useDocuments((s) => s.documents);
+  const activeSessionId = useSessions((s) => s.activeSessionId);
+  const markExported = useSessions((s) => s.markExported);
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const allDocs = Object.values(documents).sort((a, b) => a.createdAt - b.createdAt);
+  // Only docs from the active session — old hydrated sessions in the store
+  // shouldn't get bundled together.
+  const allDocs = Object.values(documents)
+    .filter((d) => !activeSessionId || d.sessionId === activeSessionId)
+    .sort((a, b) => a.createdAt - b.createdAt);
   if (allDocs.length <= 1) return null;
 
-  // Only docs with at least one accepted span are "ready"; others get warned about.
-  const readyDocs = allDocs.filter((d) =>
-    d.pages.some((p) => p.spans.some((s) => s.decision === 'accepted')),
-  );
+  const pendingApproval = allDocs.filter((d) => d.approvedAt === null);
+  const allApproved = pendingApproval.length === 0;
 
   const handleExportAll = async () => {
-    if (allDocs.length === 0) return;
+    if (allDocs.length === 0 || !allApproved) return;
     setExporting(true);
     try {
       const result = await exportBatchAsZip(allDocs, settings.mode, settings.sandboxSeed);
@@ -33,6 +38,11 @@ export function ExportAllButton() {
       );
       if (result.warnings.length > 0) console.warn('ZIP export warnings:', result.warnings);
       setTimeout(() => setToast(null), 4500);
+      if (activeSessionId) {
+        markExported(activeSessionId).catch((e) =>
+          console.warn('[export] markExported failed:', e),
+        );
+      }
     } catch (e) {
       console.error(e);
       setToast(`ZIP export failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -47,15 +57,21 @@ export function ExportAllButton() {
       <Button
         variant="secondary"
         size="sm"
-        disabled={exporting || readyDocs.length === 0}
+        disabled={exporting || !allApproved}
         onClick={handleExportAll}
         title={
-          readyDocs.length === 0
-            ? 'Accept at least one span in any document first'
+          !allApproved
+            ? `${pendingApproval.length} document(s) still need approval: ${pendingApproval
+                .map((d) => d.filename)
+                .join(', ')}`
             : `Bundle all ${allDocs.length} documents into one ZIP`
         }
       >
-        {exporting ? 'Bundling…' : `Export all as ZIP (${allDocs.length})`}
+        {exporting
+          ? 'Bundling…'
+          : !allApproved
+            ? `Approve all to export (${pendingApproval.length} pending)`
+            : `Export all as ZIP (${allDocs.length})`}
       </Button>
       <AnimatePresence>
         {toast && (

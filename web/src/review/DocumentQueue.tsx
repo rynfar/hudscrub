@@ -10,15 +10,16 @@ interface Props {
 }
 
 const statusLabel = (s: DocumentSession): string => {
+  if (s.approvedAt !== null) return 'approved';
   if (s.status === 'detecting') return 'detecting';
-  if (s.status === 'reviewing') {
+  if (s.status === 'reviewing' || s.status === 'ready') {
     const total = s.pages.reduce((n, p) => n + p.spans.length, 0);
     const done = s.pages.reduce(
       (n, p) => n + p.spans.filter((sp) => sp.decision !== 'pending').length,
       0,
     );
     if (total === 0) return 'no spans';
-    if (done === total) return 'review complete';
+    if (done === total) return 'ready to approve';
     return `${total - done} pending`;
   }
   if (s.status === 'exported') return 'exported';
@@ -62,10 +63,21 @@ export function DocumentQueue({ documents, activeId }: Props) {
                     isActive ? 'bg-[color:var(--color-surface-muted)]' : ''
                   }`}
                 >
-                  <p className="text-xs font-mono truncate text-[color:var(--color-ink)]">
-                    {d.filename}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--color-ink-subtle)] font-mono mt-0.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {d.approvedAt !== null && (
+                      <span className="text-[10px] text-[#0F5F3D] shrink-0">✓</span>
+                    )}
+                    <p className="text-xs font-mono truncate text-[color:var(--color-ink)]">
+                      {d.filename}
+                    </p>
+                  </div>
+                  <p
+                    className={`text-[10px] uppercase tracking-[0.16em] font-mono mt-0.5 ${
+                      d.approvedAt !== null
+                        ? 'text-[#0F5F3D]'
+                        : 'text-[color:var(--color-ink-subtle)]'
+                    }`}
+                  >
                     {statusLabel(d)}
                   </p>
                 </Link>
