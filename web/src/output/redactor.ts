@@ -9,7 +9,9 @@ interface MupdfAnnotation {
   setRect(rect: number[]): void;
   setContents(text: string): void;
   setColor(color: number[]): void;
+  setInteriorColor?: (color: number[]) => void;
   setDefaultAppearance?: (font: string, size: number, color: number[]) => void;
+  setBorderWidth?: (width: number) => void;
   update(): boolean;
   getContents(): string;
   getRect(): number[];
@@ -68,6 +70,16 @@ export async function redactDocument(
     }
 
     // Step 2 (sandbox only): Add FreeText annotations with replacement text.
+    //
+    // Annotation rendering notes:
+    //   - setColor() sets the BORDER stroke color (C entry in PDF spec).
+    //     We keep it white so no visible border appears around the swap.
+    //   - setInteriorColor() sets the FILL color (IC entry). We set it to
+    //     white explicitly: without this, some mupdf builds default to a
+    //     filled black rectangle, which combined with our black text reads
+    //     as a "blacked out" box in the viewer.
+    //   - setDefaultAppearance() sets the text color via the DA string.
+    //   - setBorderWidth(0) suppresses the border line entirely.
     if (opts.mode === 'sandbox') {
       for (const s of pageSpans) {
         // Type-guard: replacement must be a non-empty string. mupdf's setContents
@@ -87,8 +99,23 @@ export async function redactDocument(
           const ft = page.createAnnotation('FreeText');
           ft.setRect(rect);
           ft.setContents(String(s.replacement));
-          ft.setColor([0, 0, 0]);
-          // Some mupdf builds want a default appearance set explicitly so update() can render.
+          // White border, white fill — the swap is content-only, no box.
+          ft.setColor([1, 1, 1]);
+          if (typeof ft.setInteriorColor === 'function') {
+            try {
+              ft.setInteriorColor([1, 1, 1]);
+            } catch {
+              /* not fatal */
+            }
+          }
+          if (typeof ft.setBorderWidth === 'function') {
+            try {
+              ft.setBorderWidth(0);
+            } catch {
+              /* not fatal */
+            }
+          }
+          // Black text on the white fill.
           if (typeof ft.setDefaultAppearance === 'function') {
             try {
               ft.setDefaultAppearance('Helv', 9, [0, 0, 0]);

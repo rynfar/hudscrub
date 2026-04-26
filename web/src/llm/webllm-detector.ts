@@ -6,23 +6,7 @@ import {
   generateJson,
   type WebLlmModelKey,
 } from './webllm-client';
-import {
-  NAMES_SYSTEM,
-  ADDRESSES_SYSTEM,
-  parseEntities,
-  type ExtractedEntity,
-} from './prompts';
-
-interface PassConfig {
-  source: SpanSource;
-  label: SpanLabel;
-  systemPrompt: string;
-}
-
-const PASSES: PassConfig[] = [
-  { source: 'llm-names', label: 'NAME', systemPrompt: NAMES_SYSTEM },
-  { source: 'llm-addresses', label: 'ADDRESS', systemPrompt: ADDRESSES_SYSTEM },
-];
+import { COMBINED_SYSTEM, parseCombined } from './prompts';
 
 const randomUUID = (): string => crypto.randomUUID();
 
@@ -192,22 +176,26 @@ export class WebLlmDetector implements Detector {
     if (!text || text.trim().length === 0) return [];
     if (!this.engine) await this.ensureLoaded();
     const out: Span[] = [];
-    for (const pass of PASSES) {
-      let entities: ExtractedEntity[] = [];
-      try {
-        const json = await generateJson(this.engine, pass.systemPrompt, text);
-        entities = parseEntities(json);
-      } catch (e) {
-        console.warn(`WebLLM ${this.modelKey} ${pass.source} pass failed:`, e);
-        continue;
-      }
-      for (const e of entities) {
-        const matches = locateInText(text, e.text);
+    let combined: { names: string[]; addresses: string[] } = { names: [], addresses: [] };
+    try {
+      const json = await generateJson(this.engine, COMBINED_SYSTEM, text);
+      combined = parseCombined(json);
+    } catch (e) {
+      console.warn(`WebLLM ${this.modelKey} combined pass failed:`, e);
+      return out;
+    }
+    const buckets: { values: string[]; source: SpanSource; label: SpanLabel }[] = [
+      { values: combined.names, source: 'llm-names', label: 'NAME' },
+      { values: combined.addresses, source: 'llm-addresses', label: 'ADDRESS' },
+    ];
+    for (const { values, source, label } of buckets) {
+      for (const value of values) {
+        const matches = locateInText(text, value);
         for (const m of matches) {
           out.push({
             id: randomUUID(),
-            source: pass.source,
-            label: pass.label,
+            source,
+            label,
             text: m.matchedText,
             start: m.start,
             end: m.end,
